@@ -1,0 +1,20 @@
+{
+  "name": "rehab-ai-platform",
+  "version": "1.0.0",
+  "description": "AI Based Rehabilitation Support Platform - Full Stack",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ..",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\"",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm start",
+    "build": "cd backend && npm install && cd ../frontend && npm install && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.1"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}
