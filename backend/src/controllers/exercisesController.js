@@ -4,10 +4,12 @@ const ExerciseLog = require('../models/ExerciseLog');
 // Get all exercises with stats
 exports.getAllExercises = async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.userId || req.user?.id;
     
     // Get all exercises
-    const exercises = await Exercise.find({ isActive: true }).populate('createdBy', 'firstName lastName');
+    const exercises = await Exercise.find({ isActive: true })
+      .select('_id name description category bodyParts instructions duration repetitions difficulty isActive')
+      .lean();
     
     // Get user's exercise stats
     let stats = {
@@ -17,33 +19,37 @@ exports.getAllExercises = async (req, res) => {
     };
 
     if (userId) {
-      // Get completed exercises count
-      const completedLogs = await ExerciseLog.find({ userId });
-      stats.completed = completedLogs.length;
+      try {
+        // Get completed exercises count
+        const completedLogs = await ExerciseLog.find({ userId });
+        stats.completed = completedLogs.length;
 
-      // Get this week's exercises
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const weekLogs = await ExerciseLog.find({
-        userId,
-        date: { $gte: weekAgo }
-      });
-      stats.thisWeek = weekLogs.length;
+        // Get this week's exercises
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const weekLogs = await ExerciseLog.find({
+          userId,
+          date: { $gte: weekAgo }
+        });
+        stats.thisWeek = weekLogs.length;
+      } catch (logError) {
+        console.log('Could not fetch exercise logs:', logError.message);
+      }
     }
 
-    // Add completion status to exercises
-    const exercisesWithStatus = exercises.map(ex => ({
-      ...ex.toObject(),
-      status: Math.random() > 0.5 ? 'completed' : 'pending' // Mock status
-    }));
-
-    res.json({
+    res.status(200).json({
       success: true,
-      exercises: exercisesWithStatus,
-      stats
+      exercises: exercises,
+      stats: stats,
+      message: `Retrieved ${exercises.length} exercises`
     });
   } catch (error) {
     console.error('Error fetching exercises:', error);
-    res.status(500).json({ success: false, message: 'Error fetching exercises', error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching exercises', 
+      error: error.message,
+      exercises: []
+    });
   }
 };
 

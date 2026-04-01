@@ -37,8 +37,7 @@ const Support = () => {
       setProfessionals(response.data.professionals || []);
     } catch (error) {
       console.error('Error fetching professionals:', error);
-      // Use mock data
-      setProfessionals(getMockProfessionals());
+      setProfessionals([]);
     } finally {
       setLoading(false);
     }
@@ -265,81 +264,5 @@ const Support = () => {
     </div>
   );
 };
-
-// Mock data for demo
-const getMockProfessionals = () => [
-  {
-    _id: '1',
-    name: 'Dr. Priya Sharma',
-    specialization: 'Physiotherapist',
-    subSpecialty: 'Orthopedic Rehabilitation',
-    rating: 4.9,
-    reviews: 52,
-    nextAvailable: 'Today, 2:00 PM',
-    services: ['Rehabilitation', 'Sports Injury'],
-    online: true,
-    initials: 'PS'
-  },
-  {
-    _id: '2',
-    name: 'Dr. Rajesh Kumar',
-    specialization: 'Sports Physiotherapist',
-    subSpecialty: 'Sports Injury Recovery',
-    rating: 4.8,
-    reviews: 38,
-    nextAvailable: 'Tomorrow, 10:00 AM',
-    services: ['Sports Medicine', 'Recovery'],
-    online: false,
-    initials: 'RK'
-  },
-  {
-    _id: '3',
-    name: 'Dr. Anjali Mehta',
-    specialization: 'Rehabilitation Specialist',
-    subSpecialty: 'Post-Surgery Specialist',
-    rating: 4.9,
-    reviews: 45,
-    nextAvailable: 'Today, 4:00 PM',
-    services: ['Post-Surgery Recovery', 'Rehabilitation'],
-    online: true,
-    initials: 'AM'
-  },
-  {
-    _id: '4',
-    name: 'Dr. Vikram Singh',
-    specialization: 'Orthopedic Surgeon',
-    subSpecialty: 'Joint Replacement',
-    rating: 4.7,
-    reviews: 28,
-    nextAvailable: 'Tomorrow, 3:30 PM',
-    services: ['Orthopedic Consultation', 'Surgery'],
-    online: false,
-    initials: 'VS'
-  },
-  {
-    _id: '5',
-    name: 'Dr. Neha Gupta',
-    specialization: 'Physiotherapist',
-    subSpecialty: 'Sports Rehabilitation',
-    rating: 4.8,
-    reviews: 41,
-    nextAvailable: 'Today, 5:00 PM',
-    services: ['Athletic Training', 'Injury Prevention'],
-    online: true,
-    initials: 'NG'
-  },
-  {
-    _id: '6',
-    name: 'Dr. Arun Patel',
-    specialization: 'Rehabilitation Medicine',
-    subSpecialty: 'Neurological Rehabilitation',
-    rating: 4.6,
-    reviews: 35,
-    nextAvailable: 'Wednesday, 11:00 AM',
-    services: ['Neurological Rehab', 'Mobility'],
-    online: false,
-    initials: 'AP'
-  }
-];
 
 export default Support;

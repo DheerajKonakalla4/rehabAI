@@ -1,4 +1,31 @@
-const { User, PatientProfile, ExerciseLog, ExerciseSession, DoctorPatientRequest } = require('../models');
+const { User, PatientProfile, ExerciseLog, ExerciseSession, DoctorPatientRequest, Exercise, AssignedExercise } = require('../models');
+
+// @route   GET /api/doctor/all-patients
+// @desc    Get all patients in system (for connection)
+// @access  Private (Doctor)
+exports.getAllPatients = async (req, res) => {
+  try {
+    // Get all patient users
+    const allPatients = await User.find({ role: 'patient' })
+      .select('_id firstName lastName email phone age uniqueId')
+      .sort({ firstName: 1 });
+
+    if (!allPatients || allPatients.length === 0) {
+      return res.status(200).json({ 
+        message: 'No patients available',
+        patients: [] 
+      });
+    }
+
+    res.status(200).json({ 
+      message: `Found ${allPatients.length} patient(s)`,
+      patients: allPatients
+    });
+  } catch (error) {
+    console.error('Get all patients error:', error);
+    res.status(500).json({ message: 'Server error fetching patients', error: error.message });
+  }
+};
 
 // @route   GET /api/doctor/patients
 // @desc    Get all patients assigned to doctor
@@ -175,7 +202,7 @@ exports.getPatientReport = async (req, res) => {
 };
 
 // @route   POST /api/doctor/assign-patient
-// @desc    Assign patient to doctor
+// @desc    Directly assign patient to doctor (no request needed)
 // @access  Private (Doctor)
 exports.assignPatient = async (req, res) => {
   try {
@@ -186,15 +213,35 @@ exports.assignPatient = async (req, res) => {
       return res.status(400).json({ message: 'Patient ID is required' });
     }
 
-    const patientProfile = await PatientProfile.findOneAndUpdate(
-      { patientId },
-      { assignedDoctor: doctorId },
-      { new: true }
-    ).populate('patientId', 'firstName lastName email');
-
-    if (!patientProfile) {
+    // Verify patient exists
+    const patientUser = await User.findById(patientId);
+    if (!patientUser || patientUser.role !== 'patient') {
       return res.status(404).json({ message: 'Patient not found' });
     }
+
+    // Verify doctor exists
+    const doctorUser = await User.findById(doctorId);
+    if (!doctorUser || doctorUser.role !== 'doctor') {
+      return res.status(403).json({ message: 'You are not authorized as a doctor' });
+    }
+
+    // Get or create patient profile
+    let patientProfile = await PatientProfile.findOne({ patientId });
+    
+    if (!patientProfile) {
+      patientProfile = await PatientProfile.create({
+        patientId,
+        assignedDoctor: doctorId,
+        assignedDoctorId: doctorId
+      });
+    } else {
+      // Update existing profile with doctor assignment
+      patientProfile.assignedDoctor = doctorId;
+      patientProfile.assignedDoctorId = doctorId;
+      await patientProfile.save();
+    }
+
+    await patientProfile.populate('patientId', 'firstName lastName email phone age');
 
     res.status(200).json({
       message: 'Patient assigned successfully',
@@ -312,5 +359,188 @@ exports.getConnectedPatients = async (req, res) => {
   } catch (error) {
     console.error('Get connected patients error:', error);
     res.status(500).json({ message: 'Server error fetching connected patients', error: error.message });
+  }
+};
+
+// @route   POST /api/doctor/assign-exercise
+// @desc    Assign exercise to a connected patient
+// @access  Private (Doctor)
+// @route   POST /api/doctor/assign-exercise
+// @desc    Assign exercise to patient
+// @access  Private (Doctor)
+exports.assignExercise = async (req, res) => {
+  try {
+    const doctorId = req.user.userId;
+    const { patientId, exerciseId, notes, frequency, sets, reps, duration } = req.body;
+
+    if (!patientId || !exerciseId) {
+      return res.status(400).json({ message: 'Patient ID and Exercise ID are required' });
+    }
+
+    // Verify patient exists
+    const patient = await User.findById(patientId);
+    if (!patient || patient.role !== 'patient') {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+
+    // Verify exercise exists
+    const exercise = await Exercise.findById(exerciseId);
+    if (!exercise) {
+      return res.status(404).json({ message: 'Exercise not found' });
+    }
+
+    // Verify doctor is assigned to this patient
+    const patientProfile = await PatientProfile.findOne({
+      patientId,
+      assignedDoctorId: doctorId
+    });
+    
+    if (!patientProfile) {
+      return res.status(403).json({ message: 'This patient is not assigned to you' });
+    }
+
+    // Check if exercise is already assigned
+    const existingAssignment = await AssignedExercise.findOne({
+      patientId,
+      exerciseId,
+      status: { $ne: 'completed' }
+    });
+
+    if (existingAssignment) {
+      return res.status(400).json({ message: 'This exercise is already assigned to the patient' });
+    }
+
+    // Create assigned exercise record
+    const assignedExercise = await AssignedExercise.create({
+      patientId,
+      doctorId,
+      exerciseId,
+      notes: notes || '',
+      frequency: frequency || 'daily',
+      sets: sets || 1,
+      reps: reps || null,
+      duration: duration || null
+    });
+
+    // Populate exercise details
+    await assignedExercise.populate('exerciseId', 'name description category difficulty bodyParts duration instructions');
+    await assignedExercise.populate('patientId', 'firstName lastName email');
+
+    res.status(201).json({
+      success: true,
+      message: 'Exercise assigned successfully',
+      assignedExercise
+    });
+  } catch (error) {
+    console.error('Assign exercise error:', error);
+    res.status(500).json({ success: false, message: 'Server error assigning exercise', error: error.message });
+  }
+};
+
+// @route   POST /api/doctor/add-diet-plan
+// @desc    Add diet plan to a patient
+// @access  Private (Doctor)
+exports.addDietPlan = async (req, res) => {
+  try {
+    const doctorId = req.user.userId;
+    const { patientId, injuryType, foods, description } = req.body;
+
+    if (!patientId || !injuryType) {
+      return res.status(400).json({ message: 'Patient ID and Injury Type are required' });
+    }
+
+    // Verify patient exists
+    const patient = await User.findById(patientId);
+    if (!patient || patient.role !== 'patient') {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+
+    // Verify doctor is assigned to this patient
+    const patientProfile = await PatientProfile.findOne({ patientId });
+    if (!patientProfile || (patientProfile.assignedDoctor?.toString() !== doctorId && patientProfile.assignedDoctorId?.toString() !== doctorId)) {
+      return res.status(403).json({ message: 'Patient is not assigned to you' });
+    }
+
+    // Create diet recommendation
+    const dietRecommendation = await DietRecommendation.create({
+      patientId,
+      injuryType,
+      foods: foods || [],
+      description,
+      createdBy: doctorId,
+      isActive: true
+    });
+
+    // Add diet plan reference to patient profile
+    if (!patientProfile.dietPlans) {
+      patientProfile.dietPlans = [];
+    }
+    patientProfile.dietPlans.push(dietRecommendation._id);
+    await patientProfile.save();
+
+    res.status(201).json({
+      message: 'Diet plan added successfully',
+      dietPlan: dietRecommendation
+    });
+  } catch (error) {
+    console.error('Add diet plan error:', error);
+    res.status(500).json({ message: 'Server error adding diet plan', error: error.message });
+  }
+};
+
+// @route   GET /api/doctor/patient/:patientId/exercises
+// @desc    Get exercises assigned to a patient
+// @access  Private (Doctor)
+exports.getPatientExercises = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    // Verify patient exists
+    const patient = await User.findById(patientId);
+    if (!patient || patient.role !== 'patient') {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+
+    const exercises = await ExerciseSession.find({ patient: patientId })
+      .populate('exercise', 'name description difficulty category duration repetitions instructions imageUrl videoUrl')
+      .sort({ sessionDate: -1 });
+
+    res.status(200).json({
+      message: `Found ${exercises.length} exercise(s)`,
+      exercises
+    });
+  } catch (error) {
+    console.error('Get patient exercises error:', error);
+    res.status(500).json({ message: 'Server error fetching patient exercises', error: error.message });
+  }
+};
+
+// @route   GET /api/doctor/patient/:patientId/diets
+// @desc    Get diet plans for a patient
+// @access  Private (Doctor)
+exports.getPatientDietPlans = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    // Verify patient exists
+    const patient = await User.findById(patientId);
+    if (!patient || patient.role !== 'patient') {
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+
+    const patientProfile = await PatientProfile.findOne({ patientId });
+    
+    let dietPlans = [];
+    if (patientProfile && patientProfile.dietPlans && patientProfile.dietPlans.length > 0) {
+      dietPlans = await DietRecommendation.find({ _id: { $in: patientProfile.dietPlans } });
+    }
+
+    res.status(200).json({
+      message: `Found ${dietPlans.length} diet plan(s)`,
+      dietPlans
+    });
+  } catch (error) {
+    console.error('Get patient diet plans error:', error);
+    res.status(500).json({ message: 'Server error fetching diet plans', error: error.message });
   }
 };

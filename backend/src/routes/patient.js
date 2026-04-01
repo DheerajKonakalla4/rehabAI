@@ -37,4 +37,19 @@ router.put('/reject-request/:requestId', patientController.rejectRequest);
 // GET /api/patient/connected-doctors - Get all connected doctors
 router.get('/connected-doctors', patientController.getConnectedDoctors);
 
+// GET /api/patient/assigned-doctor - Get assigned doctor
+router.get('/assigned-doctor', patientController.getAssignedDoctor);
+
+// GET /api/patient/diet-plans - Get diet plans
+router.get('/diet-plans', patientController.getDietPlans);
+
+// PUT /api/patient/exercise-session/:sessionId/update-status - Update exercise session status
+router.put('/exercise-session/:sessionId/update-status', patientController.updateExerciseSessionStatus);
+
+// POST /api/patient/complete-exercise/:assignmentId - Mark exercise as completed
+router.post('/complete-exercise/:assignmentId', patientController.completeExercise);
+
+// POST /api/patient/start-exercise/:assignmentId - Mark exercise as in-progress
+router.post('/start-exercise/:assignmentId', patientController.startExercise);
+
 module.exports = router;

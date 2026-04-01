@@ -33,16 +33,7 @@ const Profile = () => {
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
-      // Use mock data
-      const mockData = getMockProfileData();
-      setProfileData(mockData);
-      setFormData({
-        fullName: mockData.fullName || '',
-        email: mockData.email || '',
-        phoneNumber: mockData.phoneNumber || '',
-        dateOfBirth: mockData.dateOfBirth || '',
-        address: mockData.address || ''
-      });
+      setProfileData(null);
     } finally {
       setLoading(false);
     }
@@ -56,13 +47,7 @@ const Profile = () => {
       }
     } catch (error) {
       console.error('Error fetching achievements:', error);
-      // Use mock data
-      setAchievements([
-        { id: 1, name: '7 Day Streak', icon: '🔥', earned: true, earnedAt: '2026-03-01' },
-        { id: 2, name: 'First Exercise', icon: '🎯', earned: true, earnedAt: '2026-02-15' },
-        { id: 3, name: '50% Recovery', icon: '📈', earned: true, earnedAt: '2026-02-28' },
-        { id: 4, name: '25 Exercises', icon: '💪', earned: true, earnedAt: '2026-03-05' }
-      ]);
+      setAchievements([]);
     }
   };
 
@@ -126,7 +111,7 @@ const Profile = () => {
                 : 'JD'}
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-bold mb-2">{profileData?.fullName || 'John Doe'}</h1>
+              <h1 className="text-3xl font-bold mb-2">{profileData?.fullName || `${user?.firstName} ${user?.lastName}`}</h1>
               <p className="text-blue-100 mb-1">Patient ID: {profileData?.patientId || 'PAT-2024-001'}</p>
               <Badge variant="green" className="inline-block">
                 Active Recovery Plan
@@ -242,7 +227,7 @@ const Profile = () => {
                 <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Full Name</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.fullName || 'John Doe'}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.fullName || `${user?.firstName} ${user?.lastName}`}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Email Address</p>
@@ -340,28 +325,5 @@ const Profile = () => {
     </div>
   );
 };
-
-// Mock data
-const getMockProfileData = () => ({
-  fullName: 'John Doe',
-  email: 'john.doe@example.com',
-  phoneNumber: '+91 98765 43210',
-  dateOfBirth: '1990-01-15',
-  address: '123 Recovery Lane, Mumbai, Maharashtra 400001',
-  patientId: 'PAT-2024-001',
-  stats: {
-    totalExercises: 42,
-    daysActive: 28,
-    recoveryProgress: 78,
-    streak: 7
-  },
-  medical: {
-    condition: 'Post ACL Surgery Rehabilitation',
-    startDate: 'February 7, 2024',
-    primaryTherapist: 'Dr. Priya Sharma',
-    expectedCompletion: 'May 7, 2024',
-    notes: 'Patient is making excellent progress with knee strengthening exercises. Continue current exercise regimen and gradually increase intensity. Next evaluation scheduled for March 15, 2024.'
-  }
-});
 
 export default Profile;

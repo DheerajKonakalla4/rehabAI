@@ -53,9 +53,7 @@ const ExerciseLibrary = () => {
       setStats(response.data.stats || { total: 0, completed: 0, thisWeek: 0 });
     } catch (error) {
       console.error('Error fetching exercises:', error);
-      // Use mock data if API fails
-      setExercises(getMockExercises());
-      setStats({ total: 6, completed: 2, thisWeek: 8 });
+      setExercises([]);
     } finally {
       setLoading(false);
     }
@@ -217,70 +215,5 @@ const ExerciseLibrary = () => {
     </div>
   );
 };
-
-// Mock data for demo
-const getMockExercises = () => [
-  {
-    _id: '1',
-    name: 'Knee Strengthening',
-    description: 'Build strength in your knee muscles with controlled movements',
-    category: 'strengthening',
-    bodyParts: ['knee'],
-    difficulty: 'easy',
-    duration: { value: 15, unit: 'minutes' },
-    repetitions: 10,
-    status: 'completed'
-  },
-  {
-    _id: '2',
-    name: 'Shoulder Rotation',
-    description: 'Improve shoulder mobility and range of motion',
-    category: 'mobility',
-    bodyParts: ['shoulder'],
-    difficulty: 'moderate',
-    duration: { value: 10, unit: 'minutes' },
-    repetitions: 15
-  },
-  {
-    _id: '3',
-    name: 'Back Stretching',
-    description: 'Gentle stretches to relieve back tension and improve flexibility',
-    category: 'stretching',
-    bodyParts: ['back'],
-    difficulty: 'easy',
-    duration: { value: 12, unit: 'minutes' },
-    repetitions: 8
-  },
-  {
-    _id: '4',
-    name: 'Hip Flexor Stretch',
-    description: 'Increase hip flexibility and reduce tightness',
-    category: 'stretching',
-    bodyParts: ['hip'],
-    difficulty: 'easy',
-    duration: { value: 10, unit: 'minutes' },
-    repetitions: 12
-  },
-  {
-    _id: '5',
-    name: 'Knee Extension',
-    description: 'Advanced knee strengthening for improved stability',
-    category: 'strengthening',
-    bodyParts: ['knee'],
-    difficulty: 'hard',
-    duration: { value: 20, unit: 'minutes' },
-    repetitions: 10
-  },
-  {
-    _id: '6',
-    name: 'Shoulder Blade Squeeze',
-    description: 'Strengthen upper back and improve posture',
-    category: 'strengthening',
-    bodyParts: ['shoulder'],
-    difficulty: 'moderate',
-    duration: { value: 15, unit: 'minutes' },
-    repetitions: 15
-  }
-];
 
 export default ExerciseLibrary;

@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const dietRecommendationSchema = new mongoose.Schema({
+  patientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   injuryType: {
     type: String,
     required: true
@@ -13,7 +18,8 @@ const dietRecommendationSchema = new mongoose.Schema({
   description: String,
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: true
   },
   isActive: {
     type: Boolean,

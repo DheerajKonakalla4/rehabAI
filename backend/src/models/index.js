@@ -6,6 +6,7 @@ module.exports = {
   Exercise: require('./Exercise'),
   ExerciseLog: require('./ExerciseLog'),
   ExerciseSession: require('./ExerciseSession'),
+  AssignedExercise: require('./AssignedExercise'),
   DietRecommendation: require('./DietRecommendation'),
   Message: require('./Message'),
   DoctorPatientRequest: require('./DoctorPatientRequest'),
