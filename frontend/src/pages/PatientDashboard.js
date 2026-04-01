@@ -6,126 +6,117 @@ import {
   Button, 
   Badge, 
   StatsGrid, 
-  EmptyState, 
-  RequestCard,
+  EmptyState,
   Skeleton 
 } from '../components/UIComponents';
-import apiClient from '../services/apiClient';
+import { patientsAPI } from '../services/api';
 
 const PatientDashboard = () => {
   const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboardData, setDashboardData] = useState(null);
-  const [incomingRequests, setIncomingRequests] = useState([]);
-  const [connectedDoctors, setConnectedDoctors] = useState([]);
+  const [assignedDoctor, setAssignedDoctor] = useState(null);
+  const [assignedExercises, setAssignedExercises] = useState([]);
+  const [dietPlans, setDietPlans] = useState([]);
+  const [exerciseLogs, setExerciseLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingRequests, setLoadingRequests] = useState({});
+  const [completingExerciseId, setCompletingExerciseId] = useState(null);
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchIncomingRequests();
-    fetchConnectedDoctors();
+    fetchData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchData = async () => {
     try {
-      const response = await apiClient.get('/api/patient/dashboard');
-      setDashboardData(response.data);
+      const [dashboardRes, doctorRes, exercisesRes, dietsRes, logsRes] = await Promise.all([
+        patientsAPI.getDashboard(),
+        patientsAPI.getAssignedDoctor().catch(() => ({ data: { doctor: null } })),
+        patientsAPI.getExercises().catch(() => ({ data: { exercises: [] } })),
+        patientsAPI.getDietPlans().catch(() => ({ data: { dietPlans: [] } })),
+        patientsAPI.getExerciseLogs().catch(() => ({ data: { logs: [] } }))
+      ]);
+      
+      setDashboardData(dashboardRes.data);
+      setAssignedDoctor(doctorRes.data.doctor);
+      setAssignedExercises(exercisesRes.data.exercises || []);
+      setDietPlans(dietsRes.data.dietPlans || []);
+      setExerciseLogs(logsRes.data.logs || []);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching dashboard:', error);
+      console.error('Error fetching data:', error);
       setLoading(false);
     }
   };
 
-  const fetchIncomingRequests = async () => {
+  const handleCompleteExercise = async (assignmentId) => {
     try {
-      const response = await apiClient.get('/api/patient/incoming-requests');
-      setIncomingRequests(response.data.requests || []);
+      setCompletingExerciseId(assignmentId);
+      await patientsAPI.completeExercise(assignmentId);
+      alert('Exercise marked as completed! Great work! 🎉');
+      fetchData();
     } catch (error) {
-      console.error('Error fetching requests:', error);
-    }
-  };
-
-  const fetchConnectedDoctors = async () => {
-    try {
-      const response = await apiClient.get('/api/patient/connected-doctors');
-      setConnectedDoctors(response.data.doctors || []);
-    } catch (error) {
-      console.error('Error fetching connected doctors:', error);
-    }
-  };
-
-  const handleAcceptRequest = async (requestId) => {
-    setLoadingRequests(prev => ({ ...prev, [requestId]: true }));
-    try {
-      await apiClient.put(`/api/patient/accept-request/${requestId}`);
-      fetchIncomingRequests();
-      fetchConnectedDoctors();
-    } catch (error) {
-      alert('Error accepting request: ' + error.message);
+      alert('Error: ' + (error.response?.data?.message || error.message));
     } finally {
-      setLoadingRequests(prev => ({ ...prev, [requestId]: false }));
+      setCompletingExerciseId(null);
     }
   };
 
-  const handleRejectRequest = async (requestId) => {
-    setLoadingRequests(prev => ({ ...prev, [requestId]: true }));
+  const handleStartExercise = async (assignmentId) => {
     try {
-      await apiClient.put(`/api/patient/reject-request/${requestId}`);
-      fetchIncomingRequests();
+      await patientsAPI.startExercise(assignmentId);
+      fetchData();
     } catch (error) {
-      alert('Error rejecting request: ' + error.message);
-    } finally {
-      setLoadingRequests(prev => ({ ...prev, [requestId]: false }));
+      alert('Error: ' + (error.response?.data?.message || error.message));
     }
   };
+
 
   if (loading) return <div className="min-h-screen"><Navbar /><div className="p-6"><Skeleton count={3} /></div></div>;
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
-    { id: 'requests', label: `Doctor Requests (${incomingRequests.length})` },
-    { id: 'connected', label: `Connected Doctors (${connectedDoctors.length})` }
+    { id: 'exercises', label: `Assigned Exercises (${assignedExercises.length})` },
+    { id: 'diet', label: `Diet Plans (${dietPlans.length})` }
   ];
+
+  const pendingCount = assignedExercises.filter(e => e.status === 'pending' || e.status === 'in-progress').length;
+  const completedCount = assignedExercises.filter(e => e.status === 'completed').length;
+  const progressPercentage = assignedExercises.length > 0 
+    ? Math.round((completedCount / assignedExercises.length) * 100)
+    : 0;
 
   const stats = [
-    { label: 'Recovery Progress', value: dashboardData?.stats?.recoveryProgress || '78%' },
-    { label: 'Exercises Completed', value: dashboardData?.stats?.totalExercisesLogged || 42 },
-    { label: 'Your Doctors', value: connectedDoctors.length },
-    { label: 'Streak', value: dashboardData?.stats?.streak || '7 days' }
+    { label: 'Assigned Doctor', value: assignedDoctor ? `Dr. ${assignedDoctor.lastName}` : 'Awaiting Assignment' },
+    { label: 'Total Exercises', value: assignedExercises.length },
+    { label: 'Completed', value: completedCount },
+    { label: 'Progress', value: `${progressPercentage}%` }
   ];
 
-  const weeklyChartData = [
-    { day: 'Mon', value: 65 },
-    { day: 'Tue', value: 68 },
-    { day: 'Wed', value: 71 },
-    { day: 'Thu', value: 74 },
-    { day: 'Fri', value: 76 },
-    { day: 'Sat', value: 78 },
-    { day: 'Sun', value: 78 }
-  ];
-
-  const maxValue = Math.max(...weeklyChartData.map(d => d.value));
-
-  const todayExercises = [
-    { name: 'Knee Strengthening', duration: '15 min', sets: 3 },
-    { name: 'Shoulder Rotation', duration: '10 min', sets: '15 reps' },
-    { name: 'Back Stretching', duration: '12 min', sets: '8 reps' }
-  ];
-
-  const nextAppointment = {
-    doctor: 'Dr. Priya Sharma',
-    specialty: 'Physiotherapist',
-    date: 'Tomorrow',
-    time: '10:00 AM'
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'completed':
+        return <Badge variant="success">✓ Completed</Badge>;
+      case 'in-progress':
+        return <Badge variant="warning">▶ In Progress</Badge>;
+      case 'pending':
+        return <Badge variant="gray">⏳ Pending</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
   };
 
-  const notifications = [
-    { id: 1, type: 'appointment', message: 'Time for your afternoon exercise session', time: '3 hours ago' },
-    { id: 2, type: 'achievement', message: 'Upcoming appointment with Dr. Priya Sharma', time: 'Tomorrow 10:00 AM' },
-    { id: 3, type: 'progress', message: 'Congratulations! You\'ve completed 7 days streak', time: '1 day ago' }
-  ];
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'completed':
+        return 'border-l-4 border-green-500 bg-green-50';
+      case 'in-progress':
+        return 'border-l-4 border-blue-500 bg-blue-50';
+      case 'pending':
+        return 'border-l-4 border-gray-500 bg-gray-50';
+      default:
+        return 'border-l-4 border-gray-300 bg-gray-50';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -133,164 +124,270 @@ const PatientDashboard = () => {
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         <PageHeader 
-          title={`Welcome back, ${user.firstName}! 👋`}
-          subtitle="Here's your recovery progress and today's activities"
+          title={`Welcome, ${user?.firstName}! 👋`}
+          subtitle="Your recovery progress and treatment plans"
         />
 
         <StatsGrid stats={stats} />
-
         <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Weekly Improvement Chart */}
-            <Card>
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Weekly Improvement Chart</h2>
-              <div className="flex items-end justify-between gap-2 h-64 mb-4">
-                {weeklyChartData.map((point, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center">
-                    <div className="w-full bg-gray-200 rounded-t-lg overflow-hidden relative h-56 flex items-end">
-                      <div 
-                        className="w-full bg-gradient-to-t from-blue-600 to-blue-400 transition-all duration-300 rounded-t-lg"
-                        style={{ height: `${(point.value / maxValue) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-600 mt-2">{point.day}</p>
+            {/* Assigned Doctor Card */}
+            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 p-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">👨‍⚕️ Your Medical Professional</h2>
+              {assignedDoctor ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      Dr. {assignedDoctor.firstName} {assignedDoctor.lastName}
+                    </h3>
+                    <p className="text-gray-700 mb-1">{assignedDoctor.email}</p>
+                    <p className="text-gray-700">{assignedDoctor.phone}</p>
                   </div>
-                ))}
-              </div>
-              <div className="text-center">
-                <Badge variant="green">Overall Recovery: 78%</Badge>
-              </div>
+                  <Button variant="primary">
+                    📧 Contact Doctor
+                  </Button>
+                </div>
+              ) : (
+                <EmptyState 
+                  icon="👨‍⚕️"
+                  title="No doctor assigned yet"
+                  description="Your assigned doctor will appear here once they connect with you"
+                />
+              )}
             </Card>
 
-            {/* Grid: Today's Exercise Plan and Notifications */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Today's Exercise Plan */}
-              <Card>
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Today's Exercise Plan</h2>
-                {todayExercises.length > 0 ? (
-                  <div className="space-y-3">
-                    {todayExercises.map((exercise, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <div>
-                          <h4 className="font-semibold text-gray-800">{exercise.name}</h4>
-                          <p className="text-sm text-gray-600">⏱️ {exercise.duration} • {exercise.sets}</p>
+            {/* Progress Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Exercise Progress Card */}
+              <Card className="p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">📊 Exercise Progress</h2>
+                
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-700 font-semibold">Overall Progress</span>
+                    <span className="text-3xl font-bold text-blue-600">{progressPercentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${progressPercentage}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <p className="text-gray-600 text-sm font-medium">Total</p>
+                    <p className="text-3xl font-bold text-blue-600 mt-2">{assignedExercises.length}</p>
+                  </div>
+                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                    <p className="text-gray-600 text-sm font-medium">Pending</p>
+                    <p className="text-3xl font-bold text-yellow-600 mt-2">{pendingCount}</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <p className="text-gray-600 text-sm font-medium">Completed</p>
+                    <p className="text-3xl font-bold text-green-600 mt-2">{completedCount}</p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Recent Activity */}
+              <Card className="p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">📋 Recent Activity</h2>
+                {assignedExercises.length > 0 ? (
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {assignedExercises.slice(0, 5).map((exercise) => (
+                      <div key={exercise._id} className={`p-3 rounded-lg ${getStatusColor(exercise.status)}`}>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-gray-800 font-semibold text-sm">{exercise.exerciseId?.name}</p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              {exercise.exerciseId?.category} • {exercise.exerciseId?.difficulty}
+                            </p>
+                          </div>
+                          {getStatusBadge(exercise.status)}
                         </div>
-                        <Button variant="primary" size="sm">
-                          ▶ Start
-                        </Button>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Assigned: {new Date(exercise.assignedDate).toLocaleDateString()}
+                        </p>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <EmptyState 
                     icon="📋"
-                    title="No exercises scheduled"
-                    description="Check back later for today's plan"
+                    title="No exercises yet"
+                    description="Exercises assigned by your doctor will appear here"
                   />
                 )}
               </Card>
-
-              {/* Notifications */}
-              <Card>
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Notifications</h2>
-                <div className="space-y-3">
-                  {notifications.map((notif) => (
-                    <div key={notif.id} className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                      <p className="text-gray-800 font-semibold">{notif.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
             </div>
-
-            {/* Next Appointment */}
-            <Card className="bg-gradient-to-r from-blue-50 to-purple-50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Next Appointment with Physiotherapist</h3>
-                  <p className="text-lg text-gray-700 mb-1">{nextAppointment.doctor}</p>
-                  <p className="text-sm text-gray-600 mb-3">{nextAppointment.specialty}</p>
-                  <div className="flex gap-4">
-                    <p className="text-gray-700">📅 <span className="font-semibold">{nextAppointment.date}</span></p>
-                    <p className="text-gray-700">🕐 <span className="font-semibold">{nextAppointment.time}</span></p>
-                  </div>
-                </div>
-                <Button variant="primary">
-                  📅 View Details
-                </Button>
-              </div>
-            </Card>
           </div>
         )}
 
-        {/* Requests Tab */}
-        {activeTab === 'requests' && (
-          <div className="space-y-4">
-            {incomingRequests.length > 0 ? (
-              incomingRequests.map(request => (
-                <RequestCard
-                  key={request._id}
-                  userName={`${request.doctorId.firstName} ${request.doctorId.lastName}`}
-                  userEmail={request.doctorId.email}
-                  userPhone={request.doctorId.phone}
-                  specialization={request.doctorId.specialization}
-                  message={request.message}
-                  onAccept={() => handleAcceptRequest(request._id)}
-                  onReject={() => handleRejectRequest(request._id)}
-                  loading={loadingRequests[request._id]}
-                  variant="incoming"
-                />
-              ))
+        {/* Assigned Exercises Tab */}
+        {activeTab === 'exercises' && (
+          <div className="space-y-6">
+            {assignedExercises.length > 0 ? (
+              <div className="space-y-4">
+                {assignedExercises.map((assignment) => {
+                  const exercise = assignment.exerciseId;
+                  return (
+                    <Card key={assignment._id} className={`p-6 ${getStatusColor(assignment.status)}`}>
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                            {exercise?.name}
+                          </h3>
+                          <p className="text-gray-600 mb-3">
+                            {exercise?.description}
+                          </p>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div className="text-center p-2 bg-white rounded border border-gray-200">
+                              <p className="text-xs text-gray-600">Category</p>
+                              <p className="font-semibold text-gray-800 text-sm">{exercise?.category}</p>
+                            </div>
+                            <div className="text-center p-2 bg-white rounded border border-gray-200">
+                              <p className="text-xs text-gray-600">Difficulty</p>
+                              <p className="font-semibold text-gray-800 text-sm capitalize">{exercise?.difficulty}</p>
+                            </div>
+                            <div className="text-center p-2 bg-white rounded border border-gray-200">
+                              <p className="text-xs text-gray-600">Duration</p>
+                              <p className="font-semibold text-gray-800 text-sm">
+                                {exercise?.duration?.value} {exercise?.duration?.unit}
+                              </p>
+                            </div>
+                            <div className="text-center p-2 bg-white rounded border border-gray-200">
+                              <p className="text-xs text-gray-600">Reps</p>
+                              <p className="font-semibold text-gray-800 text-sm">
+                                {exercise?.repetitions || 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {exercise?.instructions && (
+                            <div className="mb-4 p-3 bg-blue-100 rounded-lg border-l-4 border-blue-500">
+                              <p className="text-sm text-blue-900 font-semibold mb-1">Instructions:</p>
+                              <p className="text-sm text-blue-800">{exercise.instructions}</p>
+                            </div>
+                          )}
+
+                          {exercise?.bodyParts && exercise.bodyParts.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm font-semibold text-gray-700 mb-2">Target Areas:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {exercise.bodyParts.map((part, idx) => (
+                                  <Badge key={idx} variant="blue" className="capitalize">{part}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="ml-4">
+                          {getStatusBadge(assignment.status)}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 justify-between items-center">
+                        <p className="text-xs text-gray-600">
+                          Assigned: {new Date(assignment.assignedDate).toLocaleDateString()}
+                          {assignment.completedDate && ` • Completed: ${new Date(assignment.completedDate).toLocaleDateString()}`}
+                        </p>
+                        
+                        <div className="flex gap-2">
+                          {assignment.status === 'pending' && (
+                            <>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => handleStartExercise(assignment._id)}
+                              >
+                                ▶ Start
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleCompleteExercise(assignment._id)}
+                                disabled={completingExerciseId === assignment._id}
+                              >
+                                {completingExerciseId === assignment._id ? '⏳...' : '✓ Complete'}
+                              </Button>
+                            </>
+                          )}
+                          {assignment.status === 'in-progress' && (
+                            <Button
+                              variant="success"
+                              size="sm"
+                              onClick={() => handleCompleteExercise(assignment._id)}
+                              disabled={completingExerciseId === assignment._id}
+                            >
+                              {completingExerciseId === assignment._id ? '⏳...' : '✓ Mark Complete'}
+                            </Button>
+                          )}
+                          {assignment.status === 'completed' && (
+                            <Button
+                              variant="success"
+                              size="sm"
+                              disabled
+                            >
+                              ✓ Completed
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             ) : (
               <EmptyState 
-                icon="📬"
-                title="No pending requests"
-                description="Doctor requests will appear here"
+                icon="🏋️"
+                title="No exercises assigned yet"
+                description="Your doctor will assign exercises once you're connected"
               />
             )}
           </div>
         )}
 
-        {/* Connected Doctors Tab */}
-        {activeTab === 'connected' && (
+        {/* Diet Plans Tab */}
+        {activeTab === 'diet' && (
           <div className="space-y-4">
-            {connectedDoctors.length > 0 ? (
-              connectedDoctors.map(doctor => (
-                <Card key={doctor._id} className="flex justify-between items-center">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-800">
-                      Dr. {doctor.firstName} {doctor.lastName}
-                    </h3>
-                    <p className="text-gray-600">{doctor.email}</p>
-                    {doctor.specialization && (
-                      <Badge variant="blue" className="mt-2">{doctor.specialization}</Badge>
-                    )}
-                    <p className="text-gray-600 text-sm mt-2">
-                      Connected since {new Date(doctor.connectedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Button variant="primary" size="sm">
-                    Send Message
-                  </Button>
+            {dietPlans.length > 0 ? (
+              dietPlans.map((diet, idx) => (
+                <Card key={idx} className="p-6">
+                  <h2 className="text-xl font-bold text-gray-800 mb-2">
+                    Diet Plan for {diet.injuryType}
+                  </h2>
+                  {diet.description && (
+                    <p className="text-gray-700 mb-4">{diet.description}</p>
+                  )}
+                  
+                  {diet.foods && diet.foods.length > 0 && (
+                    <div className="mt-4">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-3">Recommended Foods</h3>
+                      <div className="space-y-2">
+                        {diet.foods.map((food, fIdx) => (
+                          <div key={fIdx} className="p-3 bg-green-50 rounded-lg border border-green-200">
+                            <p className="font-semibold text-gray-800">{food.name}</p>
+                            {food.quantity && <p className="text-sm text-gray-600">Quantity: {food.quantity}</p>}
+                            {food.benefits && <p className="text-sm text-green-700">Benefits: {food.benefits}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </Card>
               ))
             ) : (
               <EmptyState 
-                icon="👨‍⚕️"
-                title="No connected doctors"
-                description="Accept doctor requests to connect"
-                action={incomingRequests.length > 0 && (
-                  <Button 
-                    variant="primary" 
-                    onClick={() => setActiveTab('requests')}
-                  >
-                    Review Pending Requests
-                  </Button>
-                )}
+                icon="🥗"
+                title="No diet plans assigned"
+                description="Your doctor will add diet plans as needed"
               />
             )}
           </div>

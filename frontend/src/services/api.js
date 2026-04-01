@@ -20,8 +20,8 @@ export const patientsAPI = {
   getDashboard: () => 
     apiClient.get('/patient/dashboard'),
   
-  getExercises: () => 
-    apiClient.get('/patient/exercises'),
+  getExercises: (status) => 
+    apiClient.get('/patient/exercises', { params: { status } }),
   
   logExercise: (data) => 
     apiClient.post('/patient/exercise-log', data),
@@ -31,6 +31,33 @@ export const patientsAPI = {
   
   updateProfile: (data) => 
     apiClient.put('/patient/profile', data),
+  
+  getIncomingRequests: () => 
+    apiClient.get('/patient/incoming-requests'),
+  
+  acceptRequest: (requestId) => 
+    apiClient.put(`/patient/accept-request/${requestId}`, {}),
+  
+  rejectRequest: (requestId, data) => 
+    apiClient.put(`/patient/reject-request/${requestId}`, data),
+  
+  getConnectedDoctors: () => 
+    apiClient.get('/patient/connected-doctors'),
+  
+  getAssignedDoctor: () =>
+    apiClient.get('/patient/assigned-doctor'),
+  
+  getDietPlans: () => 
+    apiClient.get('/patient/diet-plans'),
+  
+  updateExerciseSessionStatus: (sessionId, data) => 
+    apiClient.put(`/patient/exercise-session/${sessionId}/update-status`, data),
+  
+  completeExercise: (assignmentId) => 
+    apiClient.post(`/patient/complete-exercise/${assignmentId}`, {}),
+  
+  startExercise: (assignmentId) => 
+    apiClient.post(`/patient/start-exercise/${assignmentId}`, {}),
   
   getAllPatients: () => 
     apiClient.get('/patients'),
@@ -68,6 +95,9 @@ export const physiotherapistsAPI = {
 
 // Doctor API
 export const doctorsAPI = {
+  getAllPatients: () => 
+    apiClient.get('/doctor/all-patients'),
+  
   getPatients: () => 
     apiClient.get('/doctor/patients'),
   
@@ -79,6 +109,27 @@ export const doctorsAPI = {
   
   assignPatient: (data) => 
     apiClient.post('/doctor/assign-patient', data),
+  
+  getPendingRequests: () => 
+    apiClient.get('/doctor/pending-requests'),
+  
+  getConnectedPatients: () => 
+    apiClient.get('/doctor/connected-patients'),
+  
+  sendPatientRequest: (patientUserId, data) => 
+    apiClient.post(`/doctor/send-request/${patientUserId}`, data),
+  
+  assignExercise: (data) => 
+    apiClient.post('/doctor/assign-exercise', data),
+  
+  addDietPlan: (data) => 
+    apiClient.post('/doctor/add-diet-plan', data),
+  
+  getPatientExercises: (patientId) => 
+    apiClient.get(`/doctor/patient/${patientId}/exercises`),
+  
+  getPatientDietPlans: (patientId) => 
+    apiClient.get(`/doctor/patient/${patientId}/diets`),
   
   getAllDoctors: () => 
     apiClient.get('/doctors'),
@@ -92,8 +143,8 @@ export const messagesAPI = {
   sendMessage: (data) => 
     apiClient.post('/messages/send', data),
   
-  getMessageHistory: (userId) => 
-    apiClient.get(`/messages/history/${userId}`),
+  getMessageHistory: (otherUserId) => 
+    apiClient.get('/messages/history', { params: { otherUserId } }),
   
   getInbox: () => 
     apiClient.get('/messages/inbox'),

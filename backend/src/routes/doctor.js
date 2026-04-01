@@ -7,6 +7,9 @@ const { authMiddleware, roleMiddleware } = require('../middleware/auth');
 router.use(authMiddleware);
 router.use(roleMiddleware('doctor'));
 
+// GET /api/doctor/all-patients - Get all patients available for connection
+router.get('/all-patients', doctorController.getAllPatients);
+
 // GET /api/doctor/patients - Get all assigned patients
 router.get('/patients', doctorController.getPatients);
 
@@ -27,5 +30,17 @@ router.get('/pending-requests', doctorController.getPendingRequests);
 
 // GET /api/doctor/connected-patients - Get all connected patients (accepted requests)
 router.get('/connected-patients', doctorController.getConnectedPatients);
+
+// POST /api/doctor/assign-exercise - Assign exercise to patient
+router.post('/assign-exercise', doctorController.assignExercise);
+
+// POST /api/doctor/add-diet-plan - Add diet plan to patient
+router.post('/add-diet-plan', doctorController.addDietPlan);
+
+// GET /api/doctor/patient/:patientId/exercises - Get exercises assigned to patient
+router.get('/patient/:patientId/exercises', doctorController.getPatientExercises);
+
+// GET /api/doctor/patient/:patientId/diets - Get diet plans for patient
+router.get('/patient/:patientId/diets', doctorController.getPatientDietPlans);
 
 module.exports = router;

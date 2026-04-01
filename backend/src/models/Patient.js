@@ -28,6 +28,24 @@ const patientProfileSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  assignedDoctorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  assignedExercises: [{
+    exerciseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Exercise'
+    },
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    assignedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   connectedDoctors: [{
     doctorId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -37,6 +55,10 @@ const patientProfileSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
+  }],
+  dietPlans: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DietRecommendation'
   }],
   medicalHistory: String,
   currentConditions: [String],

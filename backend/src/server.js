@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const { seedExercises } = require('../seeds/exercises');
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +16,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Auto-seed exercises on startup
+app.use(async (req, res, next) => {
+  // Only run once on first request
+  if (!app.locals.exercisesSeedDone) {
+    try {
+      await seedExercises();
+      app.locals.exercisesSeedDone = true;
+    } catch (error) {
+      console.error('Error auto-seeding exercises:', error);
+    }
+  }
+  next();
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

@@ -1,0 +1,33 @@
+
+
+
+<div class="mermaid">
+    graph TB
+    Client["Client<br/>Web & Mobile"]
+    Gateway["API Gateway"]
+    
+    UserSvc["User Service"]
+    RehabSvc["Rehab Service"]
+    ProgressSvc["Progress Service"]
+    
+    AI["AI Engine"]
+    
+    UserDB[(User DB)]
+    RehabDB[(Rehab DB)]
+    
+    Cache["Cache"]
+    Storage["Storage"]
+    
+    Client --> Gateway
+    Gateway --> UserSvc
+    Gateway --> RehabSvc
+    Gateway --> ProgressSvc
+    
+    RehabSvc --> AI
+    ProgressSvc --> AI
+    
+    UserSvc --> UserDB
+    RehabSvc --> RehabDB
+    UserSvc --> Cache
+    RehabSvc --> Storage
+</div>
