@@ -1,6 +1,8 @@
 const { User, PatientProfile } = require('../models');
 const { generateToken, hashPassword, comparePassword } = require('../utils/auth');
 
+const isValidPhoneNumber = (value) => /^\d{10}$/.test(String(value || '').trim());
+
 // @route   POST /api/auth/register
 // @desc    Register new user
 // @access  Public
@@ -21,6 +23,12 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
+    if (!isValidPhoneNumber(phone)) {
+      return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
+    }
+
+    const normalizedPhone = String(phone).trim();
+
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
@@ -38,7 +46,7 @@ exports.register = async (req, res) => {
       password: hashedPassword,
       role: role.toLowerCase(),
       age: age ? parseInt(age) : undefined,
-      phone
+      phone: normalizedPhone
     });
 
     // If user is a patient, create patient profile

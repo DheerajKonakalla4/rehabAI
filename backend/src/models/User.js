@@ -34,7 +34,13 @@ const userSchema = new mongoose.Schema({
     min: 0,
     max: 150
   },
-  phone: String,
+  phone: {
+    type: String,
+    validate: {
+      validator: (value) => value === undefined || value === null || value === '' || /^\d{10}$/.test(value),
+      message: 'Phone number must be exactly 10 digits'
+    }
+  },
   profileImage: String,
   specialization: String,
   isActive: {

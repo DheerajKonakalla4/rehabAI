@@ -155,7 +155,11 @@ exports.getExerciseLogs = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const patientId = req.user.userId;
-    const { injuryType, rehabilitationPlan, medicalHistory, currentConditions } = req.body;
+    const { injuryType, rehabilitationPlan, medicalHistory, currentConditions, phoneNumber } = req.body;
+
+    if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber !== '' && !/^\d{10}$/.test(String(phoneNumber).trim())) {
+      return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
+    }
 
     const patientProfile = await PatientProfile.findOneAndUpdate(
       { patientId },
@@ -171,6 +175,13 @@ exports.updateProfile = async (req, res) => {
 
     if (!patientProfile) {
       return res.status(404).json({ message: 'Patient profile not found' });
+    }
+
+    if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber !== '') {
+      await User.findByIdAndUpdate(patientId, {
+        phone: String(phoneNumber).trim(),
+        updatedAt: Date.now()
+      });
     }
 
     res.status(200).json({

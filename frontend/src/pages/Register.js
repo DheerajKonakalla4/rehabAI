@@ -21,10 +21,15 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const isValidPhoneNumber = (value) => /^\d{10}$/.test(value);
+
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    const nextValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value;
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: nextValue
     });
     setError('');
   };
@@ -32,6 +37,10 @@ const Register = () => {
   const validateStep1 = () => {
     if (!formData.firstName || !formData.lastName) {
       setError('First and Last names are required');
+      return false;
+    }
+    if (!isValidPhoneNumber(formData.phone)) {
+      setError('Phone number must be exactly 10 digits');
       return false;
     }
     return true;
@@ -178,10 +187,14 @@ const Register = () => {
                   <Input
                     label="Phone"
                     type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
                     name="phone"
-                    placeholder="(555) 123-4567"
+                    placeholder="10-digit phone number"
                     value={formData.phone}
                     onChange={handleChange}
+                    required
                   />
                 </div>
               </>

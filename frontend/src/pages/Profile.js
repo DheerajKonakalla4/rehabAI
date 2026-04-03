@@ -4,6 +4,8 @@ import { Navbar, PageHeader, TabBar } from '../components/Layout';
 import { Card, Button, Badge, Input, Skeleton, Avatar } from '../components/UIComponents';
 import apiClient from '../services/apiClient';
 
+const isValidPhoneNumber = (value) => /^\d{10}$/.test(value);
+
 const Profile = () => {
   const { user, logout } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('personal');
@@ -12,6 +14,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({});
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     fetchProfileData();
@@ -52,17 +55,30 @@ const Profile = () => {
   };
 
   const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    const nextValue = name === 'phoneNumber' ? value.replace(/\D/g, '').slice(0, 10) : value;
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: nextValue
     });
+
+    if (formError) {
+      setFormError('');
+    }
   };
 
   const handleSaveProfile = async () => {
+    if (!isValidPhoneNumber(formData.phoneNumber || '')) {
+      setFormError('Phone number must be exactly 10 digits.');
+      return;
+    }
+
     try {
       await apiClient.put('/api/patient/profile', formData);
       setProfileData({ ...profileData, ...formData });
       setIsEditing(false);
+      setFormError('');
       alert('Profile updated successfully');
     } catch (error) {
       alert('Error updating profile: ' + error.message);
@@ -108,11 +124,11 @@ const Profile = () => {
             <div className="text-6xl">
               {user?.firstName && user?.lastName
                 ? `${user.firstName[0]}${user.lastName[0]}`
-                : 'JD'}
+                : 'U'}
             </div>
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold mb-2">{profileData?.fullName || `${user?.firstName} ${user?.lastName}`}</h1>
-              <p className="text-blue-100 mb-1">Patient ID: {profileData?.patientId || 'PAT-2024-001'}</p>
+              <p className="text-blue-100 mb-1">Patient ID: {profileData?.patientId || 'Not available'}</p>
               <Badge variant="green" className="inline-block">
                 Active Recovery Plan
               </Badge>
@@ -159,6 +175,11 @@ const Profile = () => {
 
               {isEditing ? (
                 <div className="space-y-4">
+                  {formError && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-red-700 font-semibold text-sm">{formError}</p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
                     <input
@@ -184,10 +205,14 @@ const Profile = () => {
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
                       <input
                         type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        pattern="[0-9]{10}"
                         name="phoneNumber"
                         value={formData.phoneNumber}
                         onChange={handleFormChange}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="10-digit phone number"
                       />
                     </div>
                   </div>
@@ -231,19 +256,19 @@ const Profile = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Email Address</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.email || 'john.doe@example.com'}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.email || 'Not available'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Phone Number</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.phoneNumber || '+91 98765 43210'}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.phoneNumber || 'Not available'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Date of Birth</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.dateOfBirth || 'January 15, 1990'}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.dateOfBirth || 'Not available'}</p>
                   </div>
                   <div className="md:col-span-2">
                     <p className="text-sm text-gray-600 mb-1">Address</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.address || '123 Recovery Lane, Mumbai, Maharashtra 400001'}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.address || 'Not available'}</p>
                   </div>
                 </div>
               )}
