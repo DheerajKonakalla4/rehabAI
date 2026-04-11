@@ -42,6 +42,11 @@ app.use('/api/achievements', require('./routes/achievements'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/sessions', require('./routes/sessions'));
+app.use('/api/advanced', require('./routes/advancedFeatures'));
+
+// Initialize Background Tasks
+const startCronJobs = require('./utils/cronJobs');
+startCronJobs();
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

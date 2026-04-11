@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -41,6 +42,8 @@ const RoleDashboard = () => {
       return <PhysiotherapistDashboard />;
     case 'doctor':
       return <DoctorDashboard />;
+    case 'caregiver':
+      return <PatientDashboard />; // Caregiver sees the patient dashboard for now (read-only views will apply)
     default:
       return <Navigate to="/login" replace />;
   }
@@ -132,7 +135,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <LanguageProvider>
+          <AppRoutes />
+        </LanguageProvider>
       </AuthProvider>
     </Router>
   );

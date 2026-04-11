@@ -8,7 +8,7 @@ exports.getAllExercises = async (req, res) => {
     
     // Get all exercises
     const exercises = await Exercise.find({ isActive: true })
-      .select('_id name description category bodyParts instructions duration repetitions difficulty isActive')
+      .select('_id name description category bodyParts instructions duration repetitions difficulty imageUrl videoUrl isActive')
       .lean();
     
     // Get user's exercise stats

@@ -1,4 +1,26 @@
-const { Message, User } = require('../models');
+const { Message, User, PatientProfile } = require('../models');
+
+const isDoctorPatientPair = (userA, userB) => {
+  if (!userA || !userB) return false;
+
+  const roles = [userA.role, userB.role];
+  return roles.includes('doctor') && roles.includes('patient');
+};
+
+const hasDoctorPatientLink = async (userA, userB) => {
+  if (!isDoctorPatientPair(userA, userB)) return false;
+
+  const patientUser = userA.role === 'patient' ? userA : userB;
+  const doctorUser = userA.role === 'doctor' ? userA : userB;
+
+  const profile = await PatientProfile.findOne({ patientId: patientUser._id });
+  if (!profile) return false;
+
+  const isAssignedDoctor = profile.assignedDoctor && profile.assignedDoctor.toString() === doctorUser._id.toString();
+  const isConnectedDoctor = (profile.connectedDoctors || []).some((entry) => entry.doctorId?.toString() === doctorUser._id.toString());
+
+  return isAssignedDoctor || isConnectedDoctor;
+};
 
 // @route   POST /api/messages/send
 // @desc    Send message to another user
@@ -19,6 +41,11 @@ exports.sendMessage = async (req, res) => {
 
     if (!sender || !receiver) {
       return res.status(404).json({ message: 'Sender or receiver not found' });
+    }
+
+    const canMessage = await hasDoctorPatientLink(sender, receiver);
+    if (!canMessage) {
+      return res.status(403).json({ message: 'Messages are only allowed between linked doctors and patients' });
     }
 
     // Create message
@@ -56,6 +83,18 @@ exports.getMessageHistory = async (req, res) => {
       return res.status(400).json({ message: 'Other user ID is required' });
     }
 
+    const currentUser = await User.findById(userId);
+    const otherUser = await User.findById(otherUserId);
+
+    if (!currentUser || !otherUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const canMessage = await hasDoctorPatientLink(currentUser, otherUser);
+    if (!canMessage) {
+      return res.status(403).json({ message: 'Messages are only allowed between linked doctors and patients' });
+    }
+
     // Get messages between current user and other user
     const messages = await Message.find({
       $or: [
@@ -88,6 +127,11 @@ exports.getMessageHistory = async (req, res) => {
 exports.getInbox = async (req, res) => {
   try {
     const userId = req.user.userId;
+    const currentUser = await User.findById(userId);
+
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     // Get all unique users who have messages with current user
     const messages = await Message.find({
@@ -96,27 +140,42 @@ exports.getInbox = async (req, res) => {
         { receiverId: userId }
       ]
     })
-      .populate('senderId', 'firstName lastName email profileImage')
-      .populate('receiverId', 'firstName lastName email profileImage')
+      .populate('senderId', 'firstName lastName email profileImage role')
+      .populate('receiverId', 'firstName lastName email profileImage role')
       .sort({ timestamp: -1 });
 
     // Create conversations map
     const conversations = new Map();
 
-    messages.forEach(msg => {
+    const visibleConversationIds = new Set();
+
+    for (const msg of messages) {
       const otherUserId = msg.senderId._id.toString() === userId.toString() 
         ? msg.receiverId._id.toString() 
         : msg.senderId._id.toString();
 
+      if (visibleConversationIds.has(otherUserId)) {
+        continue;
+      }
+
+      const otherUser = msg.senderId._id.toString() === userId.toString() ? msg.receiverId : msg.senderId;
+      const canMessage = await hasDoctorPatientLink(currentUser, otherUser);
+      if (!canMessage) {
+        continue;
+      }
+
       if (!conversations.has(otherUserId)) {
         conversations.set(otherUserId, {
-          otherUser: msg.senderId._id.toString() === userId.toString() ? msg.receiverId : msg.senderId,
+          otherUser,
           lastMessage: msg.message,
           timestamp: msg.timestamp,
-          isRead: msg.senderId._id.toString() === userId.toString() || msg.isRead
+          isRead: msg.senderId._id.toString() === userId.toString() || msg.isRead,
+          unreadCount: msg.senderId._id.toString() === userId.toString() || msg.isRead ? 0 : 1
         });
       }
-    });
+
+      visibleConversationIds.add(otherUserId);
+    }
 
     const conversationsList = Array.from(conversations.values()).sort((a, b) => b.timestamp - a.timestamp);
 

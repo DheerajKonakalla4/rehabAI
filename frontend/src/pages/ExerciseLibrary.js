@@ -3,9 +3,11 @@ import { AuthContext } from '../context/AuthContext';
 import { Navbar, PageHeader, TabBar } from '../components/Layout';
 import { Card, Button, Badge, Input, Skeleton, EmptyState } from '../components/UIComponents';
 import apiClient from '../services/apiClient';
+import { useLanguage } from '../context/LanguageContext';
 
 const ExerciseLibrary = () => {
   const { user } = useContext(AuthContext);
+  const { t } = useLanguage();
   const [exercises, setExercises] = useState([]);
   const [filteredExercises, setFilteredExercises] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,17 +20,17 @@ const ExerciseLibrary = () => {
   });
 
   const categories = [
-    { id: 'all', label: 'All Exercises', icon: '🏃' },
-    { id: 'knee', label: 'Knee', icon: '🦵' },
-    { id: 'shoulder', label: 'Shoulder', icon: '💪' },
-    { id: 'back', label: 'Back', icon: '🔙' },
-    { id: 'hip', label: 'Hip', icon: '🧘' }
+    { id: 'all', label: t('allExercises'), icon: '🏃' },
+    { id: 'knee', label: t('knee'), icon: '🦵' },
+    { id: 'shoulder', label: t('shoulder'), icon: '💪' },
+    { id: 'back', label: t('back'), icon: '🔙' },
+    { id: 'hip', label: t('hip'), icon: '🧘' }
   ];
 
   const difficultyLevels = {
-    easy: 'Beginner',
-    moderate: 'Intermediate',
-    hard: 'Advanced'
+    easy: t('beginner'),
+    moderate: t('intermediate'),
+    hard: t('advanced')
   };
 
   const difficultyColors = {
@@ -81,9 +83,9 @@ const ExerciseLibrary = () => {
     setFilteredExercises(filtered);
   };
 
-  const handleStartExercise = (exerciseId) => {
-    // Navigate to exercise detail/start page
-    window.location.href = `/exercise/${exerciseId}`;
+  const handleWatchDemo = (videoUrl) => {
+    if (!videoUrl) return;
+    window.open(videoUrl, '_blank', 'noopener,noreferrer');
   };
 
   const renderExerciseCard = (exercise) => (
@@ -125,9 +127,10 @@ const ExerciseLibrary = () => {
         variant="primary"
         size="sm"
         className="w-full"
-        onClick={() => handleStartExercise(exercise._id)}
+        onClick={() => handleWatchDemo(exercise.videoUrl)}
+        disabled={!exercise.videoUrl}
       >
-        ▶ Start Exercise
+        ▶ {t('watchVideoReference')}
       </Button>
     </Card>
   );
@@ -150,22 +153,22 @@ const ExerciseLibrary = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <PageHeader
-          title="Exercise Library"
-          subtitle="Browse and start your personalized rehabilitation exercises"
+          title={t('exerciseLibraryTitle')}
+          subtitle={t('exerciseLibrarySubtitle')}
         />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-6 shadow-lg">
-            <div className="text-sm opacity-90 mb-1">Total Exercises</div>
+            <div className="text-sm opacity-90 mb-1">{t('totalExercises')}</div>
             <div className="text-3xl font-bold">{stats.total}</div>
           </div>
           <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg p-6 shadow-lg">
-            <div className="text-sm opacity-90 mb-1">Completed</div>
+            <div className="text-sm opacity-90 mb-1">{t('completed')}</div>
             <div className="text-3xl font-bold">{stats.completed}</div>
           </div>
           <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg p-6 shadow-lg">
-            <div className="text-sm opacity-90 mb-1">This Week</div>
+            <div className="text-sm opacity-90 mb-1">{t('thisWeek')}</div>
             <div className="text-3xl font-bold">{stats.thisWeek}</div>
           </div>
         </div>
@@ -174,7 +177,7 @@ const ExerciseLibrary = () => {
         <div className="mb-8">
           <div className="mb-6">
             <Input
-              placeholder="Search exercises..."
+              placeholder={t('searchExercises')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-md"
@@ -207,8 +210,8 @@ const ExerciseLibrary = () => {
         ) : (
           <EmptyState
             icon="🔍"
-            title="No exercises found"
-            subtitle={searchQuery ? "Try a different search term" : "Select another category"}
+            title={t('noExercisesFound')}
+            subtitle={searchQuery ? t('tryDifferentSearch') : t('selectAnotherCategory')}
           />
         )}
       </div>

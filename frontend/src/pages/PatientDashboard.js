@@ -10,9 +10,12 @@ import {
   Skeleton 
 } from '../components/UIComponents';
 import { patientsAPI } from '../services/api';
+import apiClient from '../services/apiClient';
+import { useLanguage } from '../context/LanguageContext';
 
 const PatientDashboard = () => {
   const { user } = useContext(AuthContext);
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboardData, setDashboardData] = useState(null);
   const [assignedDoctor, setAssignedDoctor] = useState(null);
@@ -21,6 +24,7 @@ const PatientDashboard = () => {
   const [exerciseLogs, setExerciseLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completingExerciseId, setCompletingExerciseId] = useState(null);
+  const [aiInsights, setAiInsights] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -41,6 +45,16 @@ const PatientDashboard = () => {
       setAssignedExercises(exercisesRes.data.exercises || []);
       setDietPlans(dietsRes.data.dietPlans || []);
       setExerciseLogs(logsRes.data.logs || []);
+
+      if (user && user.id) {
+          try {
+             const insightsRes = await apiClient.get(`/advanced/insights/${user.id}`);
+             setAiInsights(insightsRes.data);
+          } catch(e) {
+             console.error("Failed to load AI Insights");
+          }
+      }
+
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -74,9 +88,9 @@ const PatientDashboard = () => {
   if (loading) return <div className="min-h-screen"><Navbar /><div className="p-6"><Skeleton count={3} /></div></div>;
 
   const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'exercises', label: `Assigned Exercises (${assignedExercises.length})` },
-    { id: 'diet', label: `Diet Plans (${dietPlans.length})` }
+    { id: 'overview', label: t('overview') },
+    { id: 'exercises', label: `${t('assignedExercisesLabel')} (${assignedExercises.length})` },
+    { id: 'diet', label: `${t('dietPlansLabel')} (${dietPlans.length})` }
   ];
 
   const pendingCount = assignedExercises.filter(e => e.status === 'pending' || e.status === 'in-progress').length;
@@ -86,10 +100,10 @@ const PatientDashboard = () => {
     : 0;
 
   const stats = [
-    { label: 'Assigned Doctor', value: assignedDoctor ? `Dr. ${assignedDoctor.lastName}` : 'Awaiting Assignment' },
+    { label: t('assignedDoctor'), value: assignedDoctor ? `Dr. ${assignedDoctor.lastName}` : t('awaitingAssignment') },
     { label: 'Total Exercises', value: assignedExercises.length },
-    { label: 'Completed', value: completedCount },
-    { label: 'Progress', value: `${progressPercentage}%` }
+    { label: t('completed'), value: completedCount },
+    { label: t('progress'), value: `${progressPercentage}%` }
   ];
 
   const getStatusBadge = (status) => {
@@ -99,7 +113,7 @@ const PatientDashboard = () => {
       case 'in-progress':
         return <Badge variant="warning">▶ In Progress</Badge>;
       case 'pending':
-        return <Badge variant="gray">⏳ Pending</Badge>;
+        return <Badge variant="gray">⏳ {t('pending')}</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -125,7 +139,7 @@ const PatientDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <PageHeader 
           title={`Welcome, ${user?.firstName}! 👋`}
-          subtitle="Your recovery progress and treatment plans"
+          subtitle={t('yourRecoveryProgressAndPlans')}
         />
 
         <StatsGrid stats={stats} />
@@ -136,7 +150,7 @@ const PatientDashboard = () => {
           <div className="space-y-6">
             {/* Assigned Doctor Card */}
             <Card className="bg-gradient-to-r from-blue-50 to-purple-50 p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">👨‍⚕️ Your Medical Professional</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">👨‍⚕️ {t('yourMedicalProfessional')}</h2>
               {assignedDoctor ? (
                 <div className="flex items-center justify-between">
                   <div>
@@ -146,28 +160,45 @@ const PatientDashboard = () => {
                     <p className="text-gray-700 mb-1">{assignedDoctor.email}</p>
                     <p className="text-gray-700">{assignedDoctor.phone}</p>
                   </div>
-                  <Button variant="primary">
-                    📧 Contact Doctor
+                  <Button
+                    variant="primary"
+                    onClick={() => window.location.href = `/messaging?doctorId=${assignedDoctor._id}`}
+                  >
+                    📧 {t('contactDoctor')}
                   </Button>
                 </div>
               ) : (
                 <EmptyState 
                   icon="👨‍⚕️"
-                  title="No doctor assigned yet"
-                  description="Your assigned doctor will appear here once they connect with you"
+                  title={t('noDoctorAssignedYet')}
+                  description={t('doctorWillAppear')}
                 />
               )}
             </Card>
+
+            {/* AI Recovery Insights */}
+            {aiInsights && (
+               <Card className="bg-gradient-to-r from-green-50 to-teal-50 p-6 my-6 border-l-4 border-green-500">
+                  <h2 className="text-xl font-bold text-green-800 mb-2">🤖 {t('aiRecoveryInsights')}</h2>
+                  <p className="text-gray-800 font-medium">{aiInsights.insight}</p>
+                  {aiInsights.averagePainRecent && (
+                     <div className="mt-3 flex items-center space-x-2 text-sm text-green-700">
+                      <span className="font-bold">{t('recentAvgPain')}:</span>
+                        <span>{aiInsights.averagePainRecent} / 10</span>
+                     </div>
+                  )}
+               </Card>
+            )}
 
             {/* Progress Summary */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Exercise Progress Card */}
               <Card className="p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">📊 Exercise Progress</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">📊 {t('exerciseProgress')}</h2>
                 
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-700 font-semibold">Overall Progress</span>
+                    <span className="text-gray-700 font-semibold">{t('overallProgress')}</span>
                     <span className="text-3xl font-bold text-blue-600">{progressPercentage}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
@@ -184,7 +215,7 @@ const PatientDashboard = () => {
                     <p className="text-3xl font-bold text-blue-600 mt-2">{assignedExercises.length}</p>
                   </div>
                   <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <p className="text-gray-600 text-sm font-medium">Pending</p>
+                    <p className="text-gray-600 text-sm font-medium">{t('pending')}</p>
                     <p className="text-3xl font-bold text-yellow-600 mt-2">{pendingCount}</p>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
@@ -196,7 +227,7 @@ const PatientDashboard = () => {
 
               {/* Recent Activity */}
               <Card className="p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">📋 Recent Activity</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">📋 {t('recentActivity')}</h2>
                 {assignedExercises.length > 0 ? (
                   <div className="space-y-3 max-h-80 overflow-y-auto">
                     {assignedExercises.slice(0, 5).map((exercise) => (
@@ -211,7 +242,7 @@ const PatientDashboard = () => {
                           {getStatusBadge(exercise.status)}
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                          Assigned: {new Date(exercise.assignedDate).toLocaleDateString()}
+                          {t('assignedOn')}: {new Date(exercise.assignedDate).toLocaleDateString()}
                         </p>
                       </div>
                     ))}
@@ -219,8 +250,8 @@ const PatientDashboard = () => {
                 ) : (
                   <EmptyState 
                     icon="📋"
-                    title="No exercises yet"
-                    description="Exercises assigned by your doctor will appear here"
+                    title={t('noExercisesYet')}
+                    description={t('exercisesAssignedWillAppear')}
                   />
                 )}
               </Card>

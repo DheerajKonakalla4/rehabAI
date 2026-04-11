@@ -2,9 +2,11 @@ import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Avatar } from './UIComponents';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
+  const { language, setLanguage, t, supportedLanguages } = useLanguage();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -27,7 +29,7 @@ export const Navbar = () => {
             to="/dashboard" 
             className="hover:text-blue-100 transition font-semibold"
           >
-            Dashboard
+            {t('dashboard') || "Dashboard"}
           </Link>
           
           {user.role === 'patient' && (
@@ -36,28 +38,41 @@ export const Navbar = () => {
                 to="/exercise-library" 
                 className="hover:text-blue-100 transition font-semibold"
               >
-                Exercises
+                {t('exercises') || "Exercises"}
               </Link>
               <Link 
                 to="/chat" 
                 className="hover:text-blue-100 transition font-semibold"
               >
-                Chat
+                {t('chat') || 'Chat'}
               </Link>
               <Link 
                 to="/support" 
                 className="hover:text-blue-100 transition font-semibold"
               >
-                Support
+                {t('support') || 'Support'}
               </Link>
               <Link 
                 to="/messaging" 
                 className="hover:text-blue-100 transition font-semibold"
               >
-                Messages
+                {t('messages') || 'Messages'}
               </Link>
             </>
           )}
+
+          {/* Language Selector */}
+          <div className="relative">
+             <select 
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="bg-blue-700 text-white border-0 font-semibold px-3 py-1 rounded"
+             >
+                 {supportedLanguages.map((option) => (
+                   <option key={option.code} value={option.code}>{option.label}</option>
+                 ))}
+             </select>
+          </div>
 
           <div className="relative">
             <button 
@@ -80,20 +95,20 @@ export const Navbar = () => {
                   className="block px-4 py-2 hover:bg-blue-50 transition"
                   onClick={() => setIsDropdownOpen(false)}
                 >
-                  👤 My Profile
+                  👤 {t('profile') || 'My Profile'}
                 </Link>
                 <Link 
                   to="/progress-report" 
                   className="block px-4 py-2 hover:bg-blue-50 transition"
                   onClick={() => setIsDropdownOpen(false)}
                 >
-                  📊 Progress Report
+                  📊 {t('progressReport') || 'Progress Report'}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition font-semibold"
                 >
-                  🚪 Logout
+                  🚪 {t('logout') || 'Logout'}
                 </button>
               </div>
             )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { physiotherapistsAPI } from '../services/api';
+import apiClient from '../services/apiClient';
 
 export default function PhysiotherapistDashboard() {
   const navigate = useNavigate();
@@ -9,6 +10,11 @@ export default function PhysiotherapistDashboard() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // Plan Modification State
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [newPlanNotes, setNewPlanNotes] = useState('');
+  const [activeExercises, setActiveExercises] = useState('');
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -27,6 +33,55 @@ export default function PhysiotherapistDashboard() {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const openEditModal = (patient) => {
+    setEditingPatient(patient);
+    setNewPlanNotes(patient?.profile?.rehabPlan?.currentPhase || '');
+    setActiveExercises(JSON.stringify(patient?.profile?.rehabPlan?.activeExercises || []));
+  };
+
+  const closeEditModal = () => {
+    setEditingPatient(null);
+    setNewPlanNotes('');
+    setActiveExercises('');
+  };
+
+  const handleUpdatePlan = async () => {
+    try {
+      let parsedExercises = [];
+      try {
+        parsedExercises = JSON.parse(activeExercises);
+      } catch(e) {
+        alert('Invalid JSON for active exercises array');
+        return;
+      }
+
+      await apiClient.put(`/advanced/plan/modify/${editingPatient.patientId._id || editingPatient._id}`, {
+        newPlanNotes: newPlanNotes,
+        activeExercises: parsedExercises
+      });
+      alert('Plan successfully updated.');
+      
+      // refresh patients
+      closeEditModal();
+      const response = await physiotherapistsAPI.getPatients();
+      setPatients(response.data.patients || []);
+    } catch(err) {
+       alert(err.response?.data?.message || 'Failed to update plan');
+    }
+  };
+
+  const handleGeneratePlan = async (patientId) => {
+    try {
+       const res = await apiClient.post(`/advanced/plan/generate/${patientId}`);
+       alert('AI Plan Generated: ' + res.data?.plan?.currentPhase);
+       // Refresh
+       const response = await physiotherapistsAPI.getPatients();
+       setPatients(response.data.patients || []);
+    } catch (e) {
+       alert('Failed to generate AI plan');
+    }
   };
 
   if (loading) {
@@ -136,10 +191,22 @@ export default function PhysiotherapistDashboard() {
                       </td>
                       <td className="px-6 py-4">
                         <button
+                          onClick={() => handleGeneratePlan(patient.patientId._id)}
+                          className="text-purple-600 hover:text-purple-800 font-semibold text-sm mr-2"
+                        >
+                          Generate AI Plan
+                        </button>
+                        <button
                           onClick={() => navigate(`/mentor/patient/${patient.patientId._id}/progress`)}
-                          className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                          className="text-blue-600 hover:text-blue-800 font-semibold text-sm mr-2"
                         >
                           View Progress
+                        </button>
+                        <button
+                          onClick={() => openEditModal(patient)}
+                          className="text-green-600 hover:text-green-800 font-semibold text-sm"
+                        >
+                          Modify Plan
                         </button>
                       </td>
                     </tr>
@@ -154,6 +221,49 @@ export default function PhysiotherapistDashboard() {
           )}
         </div>
       </div>
+
+      {/* Edit Plan Modal */}
+      {editingPatient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg">
+            <h2 className="text-2xl font-bold mb-4">Modify Rehab Plan</h2>
+            <p className="text-gray-600 mb-6">Updating plan for {editingPatient?.patientId?.firstName}</p>
+            
+            <div className="mb-4">
+              <label className="block text-gray-700 font-bold mb-2">Plan Notes / Current Phase</label>
+              <textarea 
+                className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                rows="3"
+                value={newPlanNotes}
+                onChange={(e) => setNewPlanNotes(e.target.value)}
+                placeholder="Phase 2: Strengthening..."
+              ></textarea>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-gray-700 font-bold mb-2">Active Exercises (JSON Array)</label>
+              <textarea 
+                className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" 
+                rows="4"
+                value={activeExercises}
+                onChange={(e) => setActiveExercises(e.target.value)}
+                placeholder='["ex1_id", "ex2_id"]'
+              ></textarea>
+            </div>
+
+            <div className="flex justify-end gap-4">
+              <button 
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 font-semibold"
+                onClick={closeEditModal}
+              >Cancel</button>
+              <button 
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+                onClick={handleUpdatePlan}
+              >Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

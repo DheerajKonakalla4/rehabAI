@@ -1,10 +1,17 @@
 const ChatMessage = require('../models/ChatMessage');
+const mongoose = require('mongoose');
+
+const getAuthUserId = (req) => req.user?.userId || req.user?.id || req.user?._id || null;
 
 // Send message to AI chat
 exports.sendMessage = async (req, res) => {
   try {
     const { message, conversationId } = req.body;
-    const userId = req.user.id;
+    const userId = getAuthUserId(req);
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
 
     if (!message || message.trim() === '') {
       return res.status(400).json({ success: false, message: 'Message cannot be empty' });
@@ -48,8 +55,12 @@ exports.sendMessage = async (req, res) => {
 // Get chat history
 exports.getChatHistory = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = getAuthUserId(req);
     const { conversationId } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
 
     let query = { userId };
     if (conversationId) {
@@ -73,7 +84,11 @@ exports.getChatHistory = async (req, res) => {
 // Get all conversations
 exports.getConversations = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = getAuthUserId(req);
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
 
     const conversations = await ChatMessage.aggregate([
       { $match: { userId: mongoose.Types.ObjectId(userId) } },

@@ -2,12 +2,15 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Navbar, PageHeader, TabBar } from '../components/Layout';
 import { Card, Button, Badge, Input, Skeleton, Avatar } from '../components/UIComponents';
+import { authAPI, patientsAPI } from '../services/api';
 import apiClient from '../services/apiClient';
+import { useLanguage } from '../context/LanguageContext';
 
 const isValidPhoneNumber = (value) => /^\d{10}$/.test(value);
 
 const Profile = () => {
   const { user, logout } = useContext(AuthContext);
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('personal');
   const [profileData, setProfileData] = useState(null);
   const [achievements, setAchievements] = useState([]);
@@ -24,15 +27,29 @@ const Profile = () => {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/patient/profile');
-      const data = response.data;
-      setProfileData(data);
+      const [userResponse, dashboardResponse] = await Promise.all([
+        authAPI.getProfile(),
+        patientsAPI.getDashboard()
+      ]);
+
+      const userData = userResponse.data.user;
+      const patientData = dashboardResponse.data.patientProfile;
+
+      setProfileData({
+        user: userData,
+        patient: patientData,
+        stats: dashboardResponse.data.stats || {}
+      });
       setFormData({
-        fullName: data.fullName || '',
-        email: data.email || '',
-        phoneNumber: data.phoneNumber || '',
-        dateOfBirth: data.dateOfBirth || '',
-        address: data.address || ''
+        firstName: userData?.firstName || '',
+        lastName: userData?.lastName || '',
+        email: userData?.email || '',
+        phoneNumber: userData?.phone || '',
+        age: userData?.age ? String(userData.age) : '',
+        injuryType: patientData?.injuryType || '',
+        rehabilitationPlan: patientData?.rehabilitationPlan || '',
+        medicalHistory: patientData?.medicalHistory || '',
+        currentConditions: Array.isArray(patientData?.currentConditions) ? patientData.currentConditions.join(', ') : ''
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -74,9 +91,34 @@ const Profile = () => {
       return;
     }
 
+    if (formData.email && !/^\S+@\S+\.\S+$/.test(formData.email)) {
+      setFormError('Please enter a valid email address.');
+      return;
+    }
+
+    if (formData.age && Number.isNaN(Number(formData.age))) {
+      setFormError('Age must be a valid number.');
+      return;
+    }
+
     try {
-      await apiClient.put('/api/patient/profile', formData);
-      setProfileData({ ...profileData, ...formData });
+      const response = await patientsAPI.updateProfile({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        age: formData.age,
+        injuryType: formData.injuryType,
+        rehabilitationPlan: formData.rehabilitationPlan,
+        medicalHistory: formData.medicalHistory,
+        currentConditions: formData.currentConditions
+      });
+
+      setProfileData((currentProfile) => ({
+        ...currentProfile,
+        user: response.data.user || currentProfile?.user,
+        patient: response.data.patientProfile || currentProfile?.patient
+      }));
       setIsEditing(false);
       setFormError('');
       alert('Profile updated successfully');
@@ -101,16 +143,16 @@ const Profile = () => {
   }
 
   const stats = [
-    { label: 'Total Exercises', value: profileData?.stats?.totalExercises || 42, icon: '🏃' },
-    { label: 'Days Active', value: profileData?.stats?.daysActive || 28, icon: '📅' },
-    { label: 'Recovery Progress', value: `${profileData?.stats?.recoveryProgress || 78}%`, icon: '📈' },
-    { label: 'Current Streak', value: `${profileData?.stats?.streak || 7} days`, icon: '🔥' }
+    { label: 'Pending Sessions', value: profileData?.stats?.pendingSessions || 0, icon: '🏃' },
+    { label: 'Completed Sessions', value: profileData?.stats?.completedSessions || 0, icon: '📅' },
+    { label: t('totalExercises'), value: profileData?.stats?.totalExercisesLogged || 0, icon: '📈' },
+    { label: 'Active Plan', value: profileData?.patient?.rehabilitationPlan ? 'Yes' : 'No', icon: '🔥' }
   ];
 
   const tabs = [
-    { id: 'personal', label: 'Personal Information' },
-    { id: 'medical', label: 'Medical Information' },
-    { id: 'achievements', label: 'Achievements' }
+    { id: 'personal', label: t('personalInformation') },
+    { id: 'medical', label: t('medicalInformation') },
+    { id: 'achievements', label: t('achievements') }
   ];
 
   return (
@@ -127,8 +169,8 @@ const Profile = () => {
                 : 'U'}
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-bold mb-2">{profileData?.fullName || `${user?.firstName} ${user?.lastName}`}</h1>
-              <p className="text-blue-100 mb-1">Patient ID: {profileData?.patientId || 'Not available'}</p>
+              <h1 className="text-3xl font-bold mb-2">{`${profileData?.user?.firstName || user?.firstName || ''} ${profileData?.user?.lastName || user?.lastName || ''}`.trim()}</h1>
+              <p className="text-blue-100 mb-1">Patient ID: {profileData?.patient?.uniquePatientId || 'Not available'}</p>
               <Badge variant="green" className="inline-block">
                 Active Recovery Plan
               </Badge>
@@ -139,7 +181,7 @@ const Profile = () => {
                 onClick={() => setIsEditing(true)}
                 className="text-blue-700"
               >
-                ✏️ Edit Profile
+                ✏️ {t('editProfile')}
               </Button>
             )}
           </div>
@@ -161,7 +203,7 @@ const Profile = () => {
           <TabBar
             tabs={tabs}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onChange={setActiveTab}
           />
         </div>
 
@@ -170,7 +212,7 @@ const Profile = () => {
           <Card>
             <div className="space-y-6">
               <div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-6">Personal Information</h3>
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">{t('personalInformation')}</h3>
               </div>
 
               {isEditing ? (
@@ -181,18 +223,28 @@ const Profile = () => {
                     </div>
                   )}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">{t('firstName')}</label>
                     <input
                       type="text"
-                      name="fullName"
-                      value={formData.fullName}
+                      name="firstName"
+                      value={formData.firstName}
                       onChange={handleFormChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">{t('lastName')}</label>
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleFormChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">{t('emailAddress')}</label>
                       <input
                         type="email"
                         name="email"
@@ -202,7 +254,7 @@ const Profile = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">{t('phoneNumber')}</label>
                       <input
                         type="tel"
                         inputMode="numeric"
@@ -218,57 +270,88 @@ const Profile = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Date of Birth</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">{t('age')}</label>
                       <input
-                        type="date"
-                        name="dateOfBirth"
-                        value={formData.dateOfBirth}
+                        type="number"
+                        name="age"
+                        value={formData.age}
                         onChange={handleFormChange}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Address</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">{t('injuryType')}</label>
                     <input
                       type="text"
-                      name="address"
-                      value={formData.address}
+                      name="injuryType"
+                      value={formData.injuryType}
                       onChange={handleFormChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">{t('rehabilitationPlan')}</label>
+                    <textarea
+                      name="rehabilitationPlan"
+                      value={formData.rehabilitationPlan}
+                      onChange={handleFormChange}
+                      rows="3"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">{t('medicalHistory')}</label>
+                    <textarea
+                      name="medicalHistory"
+                      value={formData.medicalHistory}
+                      onChange={handleFormChange}
+                      rows="3"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">{t('currentConditions')}</label>
+                    <input
+                      type="text"
+                      name="currentConditions"
+                      value={formData.currentConditions}
+                      onChange={handleFormChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Comma-separated values"
                     />
                   </div>
 
                   <div className="flex gap-4 pt-4">
                     <Button variant="primary" onClick={handleSaveProfile}>
-                      Save Changes
+                      {t('saveChanges')}
                     </Button>
                     <Button variant="secondary" onClick={() => setIsEditing(false)}>
-                      Cancel
+                      {t('cancel')}
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Full Name</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.fullName || `${user?.firstName} ${user?.lastName}`}</p>
+                    <p className="text-sm text-gray-600 mb-1">{t('firstName')}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.user?.firstName || user?.firstName || t('noData')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Email Address</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.email || 'Not available'}</p>
+                    <p className="text-sm text-gray-600 mb-1">{t('lastName')}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.user?.lastName || user?.lastName || t('noData')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Phone Number</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.phoneNumber || 'Not available'}</p>
+                    <p className="text-sm text-gray-600 mb-1">{t('emailAddress')}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.user?.email || t('noData')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Date of Birth</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.dateOfBirth || 'Not available'}</p>
+                    <p className="text-sm text-gray-600 mb-1">{t('phoneNumber')}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.user?.phone || t('noData')}</p>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="text-sm text-gray-600 mb-1">Address</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.address || 'Not available'}</p>
+                    <p className="text-sm text-gray-600 mb-1">{t('age')}</p>
+                    <p className="text-lg font-semibold text-gray-800">{profileData?.user?.age || t('noData')}</p>
                   </div>
                 </div>
               )}
@@ -280,30 +363,30 @@ const Profile = () => {
         {activeTab === 'medical' && (
           <Card>
             <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-gray-800">Medical Information</h3>
+              <h3 className="text-2xl font-bold text-gray-800">{t('medicalInformation')}</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="border rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Condition</p>
-                  <p className="text-lg font-semibold text-gray-800">{profileData?.medical?.condition || 'Post ACL Surgery Rehabilitation'}</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('injuryType')}</p>
+                  <p className="text-lg font-semibold text-gray-800">{profileData?.patient?.injuryType || t('noData')}</p>
                 </div>
                 <div className="border rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Start Date</p>
-                  <p className="text-lg font-semibold text-gray-800">{profileData?.medical?.startDate || 'February 7, 2024'}</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('rehabilitationPlan')}</p>
+                  <p className="text-lg font-semibold text-gray-800">{profileData?.patient?.rehabilitationPlan || t('noData')}</p>
                 </div>
                 <div className="border rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Primary Therapist</p>
-                  <p className="text-lg font-semibold text-gray-800">{profileData?.medical?.primaryTherapist || 'Dr. Priya Sharma'}</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('medicalHistory')}</p>
+                  <p className="text-lg font-semibold text-gray-800">{profileData?.patient?.medicalHistory || t('noData')}</p>
                 </div>
                 <div className="border rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Expected Completion</p>
-                  <p className="text-lg font-semibold text-gray-800">{profileData?.medical?.expectedCompletion || 'May 7, 2024'}</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('currentConditions')}</p>
+                  <p className="text-lg font-semibold text-gray-800">{Array.isArray(profileData?.patient?.currentConditions) && profileData.patient.currentConditions.length > 0 ? profileData.patient.currentConditions.join(', ') : t('noData')}</p>
                 </div>
               </div>
 
               <div className="border rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-2">Notes</p>
-                <p className="text-gray-700">{profileData?.medical?.notes || 'Patient is making excellent progress with knee strengthening exercises. Continue current exercise regimen and gradually increase intensity. Next evaluation scheduled for March 15, 2024.'}</p>
+                <p className="text-gray-700">{profileData?.patient?.rehabilitationPlan || t('noData')}</p>
               </div>
             </div>
           </Card>
@@ -313,7 +396,7 @@ const Profile = () => {
         {activeTab === 'achievements' && (
           <Card>
             <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6">🏆 Achievements & Badges</h3>
+              <h3 className="text-2xl font-bold text-gray-800 mb-6">🏆 {t('achievements')} & Badges</h3>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {achievements.map((achievement) => (
@@ -343,7 +426,7 @@ const Profile = () => {
         {/* Logout Button */}
         <div className="mt-8 flex justify-end">
           <Button variant="danger" onClick={handleLogout}>
-            🚪 Logout
+            🚪 {t('logout') || 'Logout'}
           </Button>
         </div>
       </div>

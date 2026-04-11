@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { messagesAPI } from '../services/api';
+import { messagesAPI, patientsAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Messaging() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useContext(AuthContext);
+  const { t } = useLanguage();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -13,45 +16,48 @@ export default function Messaging() {
   const [error, setError] = useState('');
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
+  const [assignedDoctor, setAssignedDoctor] = useState(null);
+
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const preselectedUserId = searchParams.get('userId') || searchParams.get('doctorId');
+  const currentUserId = user?._id || user?.id;
+
+  const getUserId = (userRef) => {
+    if (!userRef) return null;
+    if (typeof userRef === 'string') return userRef;
+    return userRef._id || null;
+  };
+
+  const normalizeConversation = (conversation) => {
+    if (conversation?.otherUser) {
+      return {
+        userId: conversation.otherUser._id,
+        userName: `${conversation.otherUser.firstName || ''} ${conversation.otherUser.lastName || ''}`.trim() || conversation.otherUser.email,
+        email: conversation.otherUser.email,
+        lastMessage: conversation.lastMessage,
+        lastTime: conversation.timestamp,
+        unreadCount: conversation.unreadCount || 0
+      };
+    }
+
+    return conversation;
+  };
 
   useEffect(() => {
-    const fetchInbox = async () => {
+    const fetchAssignedDoctor = async () => {
+      if (user?.role !== 'patient') return;
       try {
-        const response = await messagesAPI.getInbox();
-        const allMessages = response.data.messages || [];
-        const uniqueConversations = {};
-
-        allMessages.forEach(msg => {
-          const otherId = msg.senderId === user._id ? msg.receiverId : msg.senderId;
-          const otherName = msg.senderName === user.firstName
-            ? msg.receiverName
-            : msg.senderName;
-
-          if (!uniqueConversations[otherId]) {
-            uniqueConversations[otherId] = {
-              userId: otherId,
-              userName: otherName,
-              lastMessage: msg.message,
-              lastTime: msg.timestamp,
-              unread: msg.senderId !== user._id && !msg.isRead
-            };
-          } else if (new Date(msg.timestamp) > new Date(uniqueConversations[otherId].lastTime)) {
-            uniqueConversations[otherId].lastMessage = msg.message;
-            uniqueConversations[otherId].lastTime = msg.timestamp;
-          }
-        });
-
-        setConversations(Object.values(uniqueConversations));
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load messages');
-      } finally {
-        setLoading(false);
+        const response = await patientsAPI.getAssignedDoctor();
+        setAssignedDoctor(response.data?.doctor || null);
+      } catch {
+        setAssignedDoctor(null);
       }
     };
-    fetchInbox();
+
+    fetchAssignedDoctor();
   }, [user]);
 
-  const handleSelectConversation = async (conversation) => {
+  const handleSelectConversation = useCallback(async (conversation) => {
     setSelectedConversation(conversation);
     try {
       const response = await messagesAPI.getMessageHistory(conversation.userId);
@@ -59,7 +65,33 @@ export default function Messaging() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load conversation');
     }
-  };
+  }, []);
+
+  const refreshInbox = useCallback(async (preferredUserId) => {
+    try {
+      setLoading(true);
+      const response = await messagesAPI.getInbox();
+      const rawConversations = response.data.conversations || [];
+      const normalizedConversations = rawConversations.map(normalizeConversation);
+      setConversations(normalizedConversations);
+
+      const targetUserId = preferredUserId || preselectedUserId;
+      if (targetUserId) {
+        const existing = normalizedConversations.find((conversation) => conversation.userId === targetUserId);
+        if (existing) {
+          await handleSelectConversation(existing);
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load messages');
+    } finally {
+      setLoading(false);
+    }
+  }, [preselectedUserId, handleSelectConversation]);
+
+  useEffect(() => {
+    refreshInbox();
+  }, [refreshInbox]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -67,16 +99,46 @@ export default function Messaging() {
 
     setSending(true);
     try {
-      const newMessage = await messagesAPI.sendMessage({
+      const response = await messagesAPI.sendMessage({
         receiverId: selectedConversation.userId,
         message: messageText
       });
-      setMessages([...messages, newMessage.data.message]);
+
+      const sentMessage = response.data?.data;
+      if (sentMessage) {
+        setMessages((prev) => [...prev, sentMessage]);
+      }
+
       setMessageText('');
+      await refreshInbox(selectedConversation.userId);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send message');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleStartAssignedDoctorChat = async () => {
+    if (!assignedDoctor?._id) {
+      setError('No assigned doctor found for your account.');
+      return;
+    }
+
+    const doctorConversation = {
+      userId: assignedDoctor._id,
+      userName: `Dr. ${assignedDoctor.firstName} ${assignedDoctor.lastName}`,
+      email: assignedDoctor.email,
+      lastMessage: '',
+      lastTime: new Date().toISOString(),
+      unreadCount: 0
+    };
+
+    setSelectedConversation(doctorConversation);
+    try {
+      const response = await messagesAPI.getMessageHistory(assignedDoctor._id);
+      setMessages(response.data.messages || []);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to open assigned doctor chat');
     }
   };
 
@@ -90,7 +152,7 @@ export default function Messaging() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading messages...</p>
+          <p className="text-gray-600">{t('loadingMessages')}</p>
         </div>
       </div>
     );
@@ -109,14 +171,14 @@ export default function Messaging() {
               >
                 ← Back
               </button>
-              <h1 className="text-2xl font-bold text-blue-600">Messages</h1>
+              <h1 className="text-2xl font-bold text-blue-600">{t('messages')}</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition"
               >
-                Logout
+                {t('logout')}
               </button>
             </div>
           </div>
@@ -135,7 +197,15 @@ export default function Messaging() {
           {/* Conversations List */}
           <div className="w-full sm:w-80 border-r border-gray-200 bg-gray-50 overflow-y-auto">
             <div className="p-4">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Conversations</h2>
+              <h2 className="text-lg font-bold text-gray-800 mb-4">{t('conversations')}</h2>
+              {user?.role === 'patient' && (
+                <button
+                  onClick={handleStartAssignedDoctorChat}
+                  className="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg transition"
+                >
+                  {t('startMessageWithAssignedDoctor')}
+                </button>
+              )}
               {conversations.length > 0 ? (
                 <div className="space-y-2">
                   {conversations.map((conversation) => (
@@ -154,20 +224,25 @@ export default function Messaging() {
                           ? 'text-blue-100'
                           : 'text-gray-600'
                       }`}>
-                        {conversation.lastMessage}
+                        {conversation.lastMessage || t('noMessagesYet')}
                       </p>
                       <p className={`text-xs mt-1 ${
                         selectedConversation?.userId === conversation.userId
                           ? 'text-blue-100'
                           : 'text-gray-500'
                       }`}>
-                        {new Date(conversation.lastTime).toLocaleDateString()}
+                        {conversation.lastTime ? new Date(conversation.lastTime).toLocaleDateString() : t('justNow')}
                       </p>
+                      {conversation.unreadCount > 0 && (
+                        <div className="mt-1 inline-flex items-center justify-center min-w-5 h-5 rounded-full bg-red-500 text-white text-xs px-1">
+                          {conversation.unreadCount}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">No conversations yet</p>
+                <p className="text-gray-500">{t('noConversationsYet')}</p>
               )}
             </div>
           </div>
@@ -186,18 +261,18 @@ export default function Messaging() {
                   messages.map((msg, index) => (
                     <div
                       key={index}
-                      className={`flex ${msg.senderId === user._id ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${getUserId(msg.senderId) === currentUserId ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
                         className={`max-w-xs px-4 py-2 rounded-lg ${
-                          msg.senderId === user._id
+                          getUserId(msg.senderId) === currentUserId
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-300 text-gray-800'
                         }`}
                       >
                         <p className="break-words">{msg.message}</p>
                         <p className={`text-xs mt-1 ${
-                          msg.senderId === user._id
+                          getUserId(msg.senderId) === currentUserId
                             ? 'text-blue-100'
                             : 'text-gray-600'
                         }`}>
@@ -207,7 +282,7 @@ export default function Messaging() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-center">No messages yet. Start the conversation!</p>
+                  <p className="text-gray-500 text-center">{t('noMessagesYetStart')}</p>
                 )}
               </div>
 
@@ -218,7 +293,7 @@ export default function Messaging() {
                     type="text"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Type a message..."
+                    placeholder={t('typeMessage')}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     disabled={sending}
                   />
@@ -227,14 +302,14 @@ export default function Messaging() {
                     disabled={sending || !messageText.trim()}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-6 rounded-lg transition"
                   >
-                    {sending ? 'Sending...' : 'Send'}
+                    {sending ? t('sending') : t('send')}
                   </button>
                 </form>
               </div>
             </div>
           ) : (
             <div className="w-full sm:flex-1 hidden sm:flex items-center justify-center bg-gray-50">
-              <p className="text-gray-500">Select a conversation to start messaging</p>
+              <p className="text-gray-500">{t('selectConversationToStartMessaging')}</p>
             </div>
           )}
 
@@ -247,7 +322,7 @@ export default function Messaging() {
                   onClick={() => setSelectedConversation(null)}
                   className="text-white hover:text-blue-100"
                 >
-                  ← Back
+                  ← {t('back')}
                 </button>
                 <h3 className="text-lg font-bold">{selectedConversation.userName}</h3>
                 <div className="w-6"></div>
@@ -259,18 +334,18 @@ export default function Messaging() {
                   messages.map((msg, index) => (
                     <div
                       key={index}
-                      className={`flex ${msg.senderId === user._id ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${getUserId(msg.senderId) === currentUserId ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
                         className={`max-w-xs px-4 py-2 rounded-lg ${
-                          msg.senderId === user._id
+                          getUserId(msg.senderId) === currentUserId
                             ? 'bg-blue-600 text-white'
                             : 'bg-gray-300 text-gray-800'
                         }`}
                       >
                         <p className="break-words">{msg.message}</p>
                         <p className={`text-xs mt-1 ${
-                          msg.senderId === user._id
+                          getUserId(msg.senderId) === currentUserId
                             ? 'text-blue-100'
                             : 'text-gray-600'
                         }`}>
@@ -280,7 +355,7 @@ export default function Messaging() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-center">No messages yet. Start the conversation!</p>
+                  <p className="text-gray-500 text-center">{t('noMessagesYetStart')}</p>
                 )}
               </div>
 
@@ -291,7 +366,7 @@ export default function Messaging() {
                     type="text"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Type a message..."
+                    placeholder={t('typeMessage')}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     disabled={sending}
                   />
@@ -300,7 +375,7 @@ export default function Messaging() {
                     disabled={sending || !messageText.trim()}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-6 rounded-lg transition"
                   >
-                    Send
+                    {t('send')}
                   </button>
                 </form>
               </div>

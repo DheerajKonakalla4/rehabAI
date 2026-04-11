@@ -15,6 +15,7 @@ const defaultExercises = [
     duration: { value: 15, unit: 'minutes' },
     repetitions: 10,
     difficulty: 'easy',
+    videoUrl: 'http://www.youtube.com/watch?v=rsSV_lqbEVo',
     isActive: true
   },
   {
@@ -26,6 +27,7 @@ const defaultExercises = [
     duration: { value: 10, unit: 'minutes' },
     repetitions: 15,
     difficulty: 'easy',
+    videoUrl: 'http://www.youtube.com/watch?v=ldUwIBccnuw',
     isActive: true
   },
   {
@@ -37,6 +39,7 @@ const defaultExercises = [
     duration: { value: 12, unit: 'minutes' },
     repetitions: 8,
     difficulty: 'easy',
+    videoUrl: 'http://www.youtube.com/watch?v=mORoTbGfhPU',
     isActive: true
   },
   {
@@ -48,6 +51,7 @@ const defaultExercises = [
     duration: { value: 10, unit: 'minutes' },
     repetitions: 12,
     difficulty: 'easy',
+    videoUrl: 'http://www.youtube.com/watch?v=mWOWpBGGY4k',
     isActive: true
   },
   {
@@ -59,6 +63,7 @@ const defaultExercises = [
     duration: { value: 20, unit: 'minutes' },
     repetitions: 10,
     difficulty: 'hard',
+    videoUrl: 'http://www.youtube.com/watch?v=0Nt2EmOEcJQ',
     isActive: true
   },
   {
@@ -70,6 +75,7 @@ const defaultExercises = [
     duration: { value: 15, unit: 'minutes' },
     repetitions: 15,
     difficulty: 'moderate',
+    videoUrl: 'http://www.youtube.com/watch?v=QN1oZVMMRjE',
     isActive: true
   },
   {
@@ -81,6 +87,7 @@ const defaultExercises = [
     duration: { value: 8, unit: 'minutes' },
     repetitions: 10,
     difficulty: 'easy',
+    videoUrl: 'http://www.youtube.com/watch?v=LXjYdUS8NBM',
     isActive: true
   },
   {
@@ -92,6 +99,7 @@ const defaultExercises = [
     duration: { value: 10, unit: 'minutes' },
     repetitions: 8,
     difficulty: 'easy',
+    videoUrl: 'http://www.youtube.com/watch?v=zpOVtbN-Uyk',
     isActive: true
   }
 ];
@@ -122,7 +130,18 @@ async function seedExercises() {
         console.log(`  - ${ex.name} (${ex.difficulty})`);
       });
     } else {
-      console.log(`✓ Database already has ${exerciseCount} exercises. Skipping seed.`);
+      console.log(`✓ Database already has ${exerciseCount} exercises. Syncing video URLs...`);
+
+      const videoSyncTasks = defaultExercises
+        .filter((exercise) => exercise.videoUrl)
+        .map((exercise) => Exercise.updateMany(
+          { name: exercise.name },
+          { $set: { videoUrl: exercise.videoUrl, updatedAt: Date.now() } }
+        ));
+
+      const syncResults = await Promise.all(videoSyncTasks);
+      const syncedCount = syncResults.reduce((acc, result) => acc + (result.modifiedCount || 0), 0);
+      console.log(`✓ Synced video URLs for ${syncedCount} existing exercise record(s).`);
     }
 
     // Only disconnect if this script was run directly (not called from server)

@@ -155,38 +155,109 @@ exports.getExerciseLogs = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const patientId = req.user.userId;
-    const { injuryType, rehabilitationPlan, medicalHistory, currentConditions, phoneNumber } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      age,
+      injuryType,
+      rehabilitationPlan,
+      medicalHistory,
+      currentConditions
+    } = req.body;
 
     if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber !== '' && !/^\d{10}$/.test(String(phoneNumber).trim())) {
       return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
     }
 
-    const patientProfile = await PatientProfile.findOneAndUpdate(
-      { patientId },
-      {
-        injuryType,
-        rehabilitationPlan,
-        medicalHistory,
-        currentConditions,
-        updatedAt: Date.now()
-      },
-      { new: true }
-    ).populate('assignedPhysiotherapist assignedDoctor', 'firstName lastName email');
+    if (age !== undefined && age !== null && age !== '' && Number.isNaN(Number(age))) {
+      return res.status(400).json({ message: 'Age must be a valid number' });
+    }
 
+    const user = await User.findById(patientId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const patientProfile = await PatientProfile.findOne({ patientId });
     if (!patientProfile) {
       return res.status(404).json({ message: 'Patient profile not found' });
     }
 
-    if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber !== '') {
-      await User.findByIdAndUpdate(patientId, {
-        phone: String(phoneNumber).trim(),
-        updatedAt: Date.now()
-      });
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : undefined;
+    if (normalizedEmail && normalizedEmail !== user.email) {
+      const existingUser = await User.findOne({ email: normalizedEmail, _id: { $ne: patientId } });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email is already in use' });
+      }
     }
+
+    const currentConditionsArray = Array.isArray(currentConditions)
+      ? currentConditions.map((item) => String(item).trim()).filter(Boolean)
+      : typeof currentConditions === 'string'
+        ? currentConditions.split(',').map((item) => item.trim()).filter(Boolean)
+        : undefined;
+
+    if (firstName !== undefined) {
+      user.firstName = String(firstName).trim();
+    }
+
+    if (lastName !== undefined) {
+      user.lastName = String(lastName).trim();
+    }
+
+    if (normalizedEmail) {
+      user.email = normalizedEmail;
+    }
+
+    if (age !== undefined && age !== null && age !== '') {
+      user.age = Number(age);
+      patientProfile.age = Number(age);
+    }
+
+    if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber !== '') {
+      user.phone = String(phoneNumber).trim();
+    }
+
+    if (injuryType !== undefined) {
+      patientProfile.injuryType = injuryType || null;
+      patientProfile.condition = injuryType || patientProfile.condition || null;
+    }
+
+    if (rehabilitationPlan !== undefined) {
+      patientProfile.rehabilitationPlan = rehabilitationPlan || null;
+    }
+
+    if (medicalHistory !== undefined) {
+      patientProfile.medicalHistory = medicalHistory || null;
+    }
+
+    if (currentConditionsArray !== undefined) {
+      patientProfile.currentConditions = currentConditionsArray;
+    }
+
+    user.updatedAt = Date.now();
+    patientProfile.updatedAt = Date.now();
+
+    await Promise.all([user.save(), patientProfile.save()]);
+
+    const updatedPatientProfile = await PatientProfile.findOne({ patientId })
+      .populate('assignedPhysiotherapist assignedDoctor', 'firstName lastName email');
 
     res.status(200).json({
       message: 'Profile updated successfully',
-      patientProfile
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        age: user.age,
+        phone: user.phone,
+        profileImage: user.profileImage
+      },
+      patientProfile: updatedPatientProfile
     });
   } catch (error) {
     console.error('Update profile error:', error);

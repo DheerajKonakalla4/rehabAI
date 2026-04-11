@@ -2,10 +2,16 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { patientsAPI } from '../services/api';
+import apiClient from '../services/apiClient';
+import AIPostureFeedback from '../components/AIPostureFeedback';
+import VideoPlayer from '../components/VideoPlayer';
+import { saveSessionOffline } from '../services/offlineSync';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ExerciseTracking() {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
+  const { t } = useLanguage();
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,6 +23,10 @@ export default function ExerciseTracking() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  
+  // AI Feature States
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [postureIssues, setPostureIssues] = useState([]);
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -52,17 +62,51 @@ export default function ExerciseTracking() {
 
     setSubmitting(true);
     setError('');
-    try {
-      await patientsAPI.logExercise({
+    
+    const payload = {
         exerciseId: selectedExercise._id || selectedExercise.exerciseId._id,
         completedSets: parseInt(logData.completedSets),
-        painLevel: logData.painLevel ? parseInt(logData.painLevel) : undefined,
-        notes: logData.notes
+        pain_level: logData.painLevel ? parseInt(logData.painLevel) : 5, // Defaulting if not set
+        notes: logData.notes,
+        postureIssues: postureIssues
+    };
+
+    try {
+      // 1. Regular Log
+      await patientsAPI.logExercise({
+        exerciseId: payload.exerciseId,
+        completedSets: payload.completedSets,
+        painLevel: payload.pain_level,
+        notes: payload.notes
       });
-      setSuccessMessage('Exercise logged successfully!');
+      
+      // 2. Advanced Safety / AI Log
+      try {
+        const advRes = await apiClient.post('/advanced/session/log', {
+          sessionId: payload.exerciseId, // Using exerciseId temporarily or if you have a proper session ID
+          pain_level: payload.pain_level,
+          postureIssues: payload.postureIssues
+        });
+        if (advRes.data.alert) {
+             setSuccessMessage(advRes.data.alert);
+        } else {
+             setSuccessMessage('Exercise logged successfully!');
+        }
+      } catch (err) {
+         // Offline Fallback
+         if (!navigator.onLine) {
+             saveSessionOffline(payload);
+             setSuccessMessage('Saved offline. Will sync when back online.');
+         } else {
+             setSuccessMessage('Exercise logged successfully!');
+         }
+      }
+
       setLogData({ completedSets: '', painLevel: '', notes: '' });
       setSelectedExercise(null);
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setPostureIssues([]);
+      setIsCameraActive(false);
+      setTimeout(() => setSuccessMessage(''), 4000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to log exercise');
     } finally {
@@ -80,7 +124,7 @@ export default function ExerciseTracking() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading exercises...</p>
+          <p className="text-gray-600">{t('loadingExercises')}</p>
         </div>
       </div>
     );
@@ -99,7 +143,7 @@ export default function ExerciseTracking() {
               >
                 ← Back
               </button>
-              <h1 className="text-2xl font-bold text-blue-600">Exercise Tracking</h1>
+              <h1 className="text-2xl font-bold text-blue-600">{t('exerciseTrackingTitle')}</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -131,7 +175,7 @@ export default function ExerciseTracking() {
           {/* Available Exercises */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">My Exercises</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">{t('myExercises')}</h2>
               {exercises.length > 0 ? (
                 <div className="space-y-4">
                   {exercises.map((exercise) => {
@@ -179,14 +223,45 @@ export default function ExerciseTracking() {
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Log Exercise</h2>
             {selectedExercise ? (
               <form onSubmit={handleSubmitLog} className="space-y-4">
+                {/* Simulated Video Tutorial */}
+                {selectedExercise.videoUrl && (
+                   <VideoPlayer 
+                     title={`${selectedExercise.name} Tutorial`}
+                     src={selectedExercise.videoUrl}
+                     description={t('watchVideoReference')}
+                   />
+                )}
+
+                {/* AI Posture Tracking Section */}
+                <div className="mb-4">
+                   <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg shadow-inner">
+                      <div>
+                         <h3 className="font-bold text-gray-700">AI Posture Coach</h3>
+                         <p className="text-xs text-gray-500">{t('enableWebcam')}</p>
+                      </div>
+                      <button 
+                         type="button"
+                         onClick={() => setIsCameraActive(!isCameraActive)}
+                         className={`px-4 py-2 text-white text-sm font-semibold rounded-full shadow transition-colors ${isCameraActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+                      >
+                         {isCameraActive ? t('stopTracking') : t('startTracking')}
+                      </button>
+                   </div>
+                   {isCameraActive && (
+                     <div className="mt-2">
+                        <AIPostureFeedback isTracking={isCameraActive} setFeedbackList={setPostureIssues} />
+                     </div>
+                   )}
+                </div>
+
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <p className="font-semibold text-gray-800">{selectedExercise.name}</p>
-                  <p className="text-sm text-gray-600">Selected</p>
+                  <p className="text-sm text-gray-600">{t('selected')}</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Completed Sets / Reps *
+                    {t('completedSetsReps')}
                   </label>
                   <input
                     type="number"
@@ -203,7 +278,7 @@ export default function ExerciseTracking() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pain Level (0-10)
+                    {t('painLevel')}
                   </label>
                   <input
                     type="number"
@@ -220,7 +295,7 @@ export default function ExerciseTracking() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes
+                    {t('notes')}
                   </label>
                   <textarea
                     name="notes"
@@ -238,7 +313,7 @@ export default function ExerciseTracking() {
                   disabled={submitting}
                   className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition"
                 >
-                  {submitting ? 'Logging...' : 'Log Exercise'}
+                  {submitting ? 'Logging...' : t('logExercise')}
                 </button>
 
                 <button
@@ -247,11 +322,11 @@ export default function ExerciseTracking() {
                   className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition"
                   disabled={submitting}
                 >
-                  Clear Selection
+                  {t('clearSelection')}
                 </button>
               </form>
             ) : (
-              <p className="text-gray-500">Select an exercise to log it</p>
+              <p className="text-gray-500">Select an exercise to {t('logExercise').toLowerCase()}</p>
             )}
           </div>
         </div>

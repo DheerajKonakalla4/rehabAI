@@ -60,12 +60,28 @@ const patientProfileSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'DietRecommendation'
   }],
+  age: Number,
+  condition: String,
+  rehabPlan: {
+    currentPhase: String,
+    targetGoals: [String],
+    activeExercises: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Exercise' }]
+  },
+  planHistory: [{
+    planNotes: String,
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    updatedAt: { type: Date, default: Date.now }
+  }],
   medicalHistory: String,
   currentConditions: [String],
   emergencyContact: {
     name: String,
     phone: String
   },
+  caregivers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   createdAt: {
     type: Date,
     default: Date.now

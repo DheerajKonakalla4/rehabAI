@@ -37,13 +37,22 @@ const exerciseSessionSchema = new mongoose.Schema({
   notes: String,
   pain_level: {
     type: Number,
-    min: 0,
-    max: 10
+    min: [1, 'Pain level must be at least 1'],
+    max: [10, 'Pain level cannot exceed 10']
   },
   effort_level: {
     type: Number,
     min: 0,
     max: 10
+  },
+  postureFeedback: [{
+    timestamp: Date,
+    issue: String,
+    correction: String
+  }],
+  safetyAlertTriggered: {
+    type: Boolean,
+    default: false
   },
   createdAt: {
     type: Date,

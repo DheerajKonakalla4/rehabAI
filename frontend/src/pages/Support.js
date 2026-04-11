@@ -1,34 +1,34 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar, PageHeader, TabBar } from '../components/Layout';
 import { Card, Button, Badge, Input, Skeleton, EmptyState } from '../components/UIComponents';
 import apiClient from '../services/apiClient';
+import { messagesAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const Support = () => {
-  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('professionals');
   const [professionals, setProfessionals] = useState([]);
   const [filteredProfessionals, setFilteredProfessionals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('all');
-  const [selectedChat, setSelectedChat] = useState(null);
+  const [activeChats, setActiveChats] = useState([]);
 
   const specialties = [
-    { id: 'all', label: 'All Professionals' },
-    { id: 'physiotherapist', label: 'Physiotherapist' },
-    { id: 'sports-medicine', label: 'Sports Medicine' },
-    { id: 'orthopedic', label: 'Orthopedic' },
-    { id: 'post-surgery', label: 'Post-Surgery Recovery' }
+    { id: 'all', label: t('allProfessionals') },
+    { id: 'physiotherapist', label: t('physiotherapist') },
+    { id: 'sports medicine', label: t('sportsMedicine') },
+    { id: 'orthopedic', label: t('orthopedic') },
+    { id: 'post-surgery recovery', label: t('postSurgeryRecovery') }
   ];
 
   useEffect(() => {
     fetchProfessionals();
+    fetchActiveChats();
   }, []);
-
-  useEffect(() => {
-    filterProfessionals();
-  }, [professionals, searchQuery, selectedSpecialty]);
 
   const fetchProfessionals = async () => {
     try {
@@ -43,30 +43,44 @@ const Support = () => {
     }
   };
 
-  const filterProfessionals = () => {
+  const fetchActiveChats = async () => {
+    try {
+      const response = await messagesAPI.getInbox();
+      setActiveChats(response.data.conversations || []);
+    } catch (error) {
+      console.error('Error fetching active chats:', error);
+      setActiveChats([]);
+    }
+  };
+
+  const filterProfessionals = useCallback(() => {
     let filtered = professionals;
 
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(prof =>
-        prof.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prof.specialization.toLowerCase().includes(searchQuery.toLowerCase())
+        (prof.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (prof.specialization || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (prof.bio || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     // Filter by specialty
     if (selectedSpecialty !== 'all') {
       filtered = filtered.filter(prof =>
-        prof.specialization.toLowerCase().includes(selectedSpecialty)
+        (prof.specialization || '').toLowerCase().includes(selectedSpecialty)
       );
     }
 
     setFilteredProfessionals(filtered);
-  };
+  }, [professionals, searchQuery, selectedSpecialty]);
+
+  useEffect(() => {
+    filterProfessionals();
+  }, [filterProfessionals]);
 
   const handleChatNow = (professional) => {
-    setSelectedChat(professional);
-    // In real app, this would navigate to chat or open chat modal
+    navigate(`/messaging?userId=${professional.userId}`);
   };
 
   const handleBookAppointment = (professionalId) => {
@@ -86,7 +100,7 @@ const Support = () => {
       {/* Professional Header */}
       <div className="flex items-center gap-4 mb-6 pb-6 border-b">
         <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-          {professional.initials || professional.name.split(' ').map(n => n[0]).join('')}
+          {professional.initials || (professional.name || '').split(' ').filter(Boolean).map(n => n[0]).join('')}
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-bold text-gray-800">{professional.name}</h3>
@@ -94,6 +108,8 @@ const Support = () => {
           {professional.subSpecialty && (
             <p className="text-xs text-gray-500">{professional.subSpecialty}</p>
           )}
+          {professional.email && <p className="text-xs text-gray-500">{professional.email}</p>}
+          {professional.phone && <p className="text-xs text-gray-500">{professional.phone}</p>}
         </div>
         {professional.online && (
           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -106,6 +122,9 @@ const Support = () => {
           <span className="text-yellow-400">⭐ {professional.rating}</span>
           <span className="text-sm text-gray-600">({professional.reviews} reviews)</span>
         </div>
+        {professional.bio && (
+          <p className="text-sm text-gray-700 mb-2">{professional.bio}</p>
+        )}
         <div className="flex gap-1 flex-wrap">
           {professional.services?.map((service, idx) => (
             <Badge key={idx} variant="blue" className="text-xs">
@@ -120,7 +139,8 @@ const Support = () => {
         <p className="text-sm text-gray-700">
           <span className="font-semibold">📅 {professional.nextAvailable}</span>
         </p>
-        <p className="text-xs text-gray-500">Available for appointment</p>
+        <p className="text-xs text-gray-500">{professional.responseTime || t('availableForAppointment')}</p>
+        <p className="text-xs text-gray-500">{professional.isVerified ? t('verifiedProfessional') : t('verificationPending')}</p>
       </div>
 
       {/* Action Buttons */}
@@ -131,18 +151,18 @@ const Support = () => {
             size="sm"
             className="flex-1"
             onClick={() => handleCall(professional)}
-            title="Phone Call"
+            title={t('call')}
           >
-            📞 Call
+            📞 {t('call')}
           </Button>
           <Button
             variant="secondary"
             size="sm"
             className="flex-1"
             onClick={() => handleVideo(professional)}
-            title="Video Call"
+            title={t('video')}
           >
-            📹 Video
+            📹 {t('video')}
           </Button>
         </div>
         <Button
@@ -151,7 +171,7 @@ const Support = () => {
           className="w-full"
           onClick={() => handleChatNow(professional)}
         >
-          💬 Chat Now
+          💬 {t('chatNow')}
         </Button>
         <Button
           variant="outline"
@@ -159,15 +179,15 @@ const Support = () => {
           className="w-full"
           onClick={() => handleBookAppointment(professional._id)}
         >
-          📅 Book Appointment
+          📅 {t('bookAppointment')}
         </Button>
       </div>
     </Card>
   );
 
   const tabs = [
-    { id: 'professionals', label: 'Find Professionals' },
-    { id: 'active', label: 'Active Chats' }
+    { id: 'professionals', label: t('findProfessionals') },
+    { id: 'active', label: t('activeChats') }
   ];
 
   if (loading) {
@@ -188,8 +208,8 @@ const Support = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <PageHeader
-          title="Support & Medical Professionals"
-          subtitle="Connect with expert physiotherapists for personalized guidance"
+          title={t('supportTitle')}
+          subtitle={t('supportSubtitle')}
         />
 
         {/* Tab Navigation */}
@@ -197,7 +217,7 @@ const Support = () => {
           <TabBar 
             tabs={tabs}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onChange={setActiveTab}
           />
         </div>
 
@@ -208,7 +228,7 @@ const Support = () => {
             <div className="mb-8">
               <div className="mb-6 flex gap-4">
                 <Input
-                  placeholder="Search by name or specialty..."
+                  placeholder={t('searchByNameOrSpecialty')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1 max-w-md"
@@ -241,8 +261,8 @@ const Support = () => {
             ) : (
               <EmptyState
                 icon="🔍"
-                title="No professionals found"
-                subtitle="Try adjusting your search filters"
+                title={t('noProfessionalsFound')}
+                subtitle={t('tryAdjustingSearchFilters')}
               />
             )}
           </div>
@@ -251,13 +271,46 @@ const Support = () => {
         {/* Active Chats Tab */}
         {activeTab === 'active' && (
           <div>
-            <p className="text-gray-600 mb-6">Your active conversations with medical professionals</p>
-            {/* This would show active chats - implementation depends on your chat system */}
-            <EmptyState
-              icon="💬"
-              title="No active chats"
-              subtitle="Start a conversation with a professional to see it here"
-            />
+            <p className="text-gray-600 mb-6">{t('yourActiveConversations')}</p>
+            {activeChats.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {activeChats.map((chat) => {
+                  const other = chat.otherUser || {};
+                  const displayName = `${other.firstName || ''} ${other.lastName || ''}`.trim() || other.email || t('unknownUser');
+                  return (
+                    <Card key={other._id || chat.timestamp} className="p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-800">{displayName}</h3>
+                          <p className="text-sm text-gray-600 mb-2">{other.email || t('noEmailAvailable')}</p>
+                          <p className="text-sm text-gray-700">{chat.lastMessage || t('noMessagesYetStart')}</p>
+                          <p className="text-xs text-gray-500 mt-2">{chat.timestamp ? new Date(chat.timestamp).toLocaleString() : ''}</p>
+                        </div>
+                        {!chat.isRead && (
+                          <Badge variant="red" className="text-xs">{t('unread')}</Badge>
+                        )}
+                      </div>
+                      <div className="mt-4">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => navigate(`/messaging?userId=${other._id}`)}
+                        >
+                          {t('openChat')}
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                icon="💬"
+                title={t('noActiveChats')}
+                subtitle={t('startConversationHint')}
+              />
+            )}
           </div>
         )}
       </div>

@@ -20,21 +20,78 @@ exports.getAllProfessionals = async (req, res) => {
       .populate('userId', 'firstName lastName email phone')
       .sort({ rating: -1 });
 
+    const professionalEntries = professionals.map(prof => ({
+      _id: prof._id,
+      userId: prof.userId?._id,
+      name: prof.name || `${prof.userId?.firstName || ''} ${prof.userId?.lastName || ''}`.trim(),
+      firstName: prof.userId?.firstName,
+      lastName: prof.userId?.lastName,
+      email: prof.userId?.email,
+      phone: prof.userId?.phone,
+      specialization: prof.specialization,
+      subSpecialty: prof.subSpecialty,
+      bio: prof.bio,
+      rating: prof.rating,
+      reviews: prof.reviews,
+      services: prof.services,
+      availability: prof.availability,
+      nextAvailable: prof.nextAvailable,
+      online: prof.online,
+      responseTime: prof.responseTime,
+      isVerified: prof.isVerified,
+      source: 'professional-profile'
+    }));
+
+    const profUserIds = new Set(professionalEntries.map((entry) => String(entry.userId)).filter(Boolean));
+
+    const doctorQuery = { role: 'doctor', isActive: true };
+    if (specialization) {
+      doctorQuery.specialization = { $regex: specialization, $options: 'i' };
+    }
+
+    const doctors = await User.find(doctorQuery).select('firstName lastName email phone specialization profileImage uniqueId');
+
+    const doctorEntries = doctors
+      .filter((doctor) => !profUserIds.has(String(doctor._id)))
+      .map((doctor) => ({
+        _id: doctor._id,
+        userId: doctor._id,
+        name: `Dr. ${doctor.firstName || ''} ${doctor.lastName || ''}`.trim(),
+        firstName: doctor.firstName,
+        lastName: doctor.lastName,
+        email: doctor.email,
+        phone: doctor.phone,
+        specialization: doctor.specialization || 'General Rehabilitation',
+        subSpecialty: null,
+        bio: 'Medical professional available for rehabilitation support.',
+        rating: 0,
+        reviews: 0,
+        services: ['Consultation', 'Rehabilitation Guidance'],
+        availability: null,
+        nextAvailable: 'Contact for availability',
+        online: false,
+        responseTime: 'Usually replies within 24 hours',
+        isVerified: true,
+        source: 'doctor-user'
+      }));
+
+    let mergedProfessionals = [...professionalEntries, ...doctorEntries];
+
+    if (isOnline === 'true') {
+      mergedProfessionals = mergedProfessionals.filter((entry) => entry.online);
+    }
+
+    mergedProfessionals.sort((a, b) => {
+      if (a.online !== b.online) {
+        return Number(b.online) - Number(a.online);
+      }
+
+      return (b.rating || 0) - (a.rating || 0);
+    });
+
     res.json({
       success: true,
-      professionals: professionals.map(prof => ({
-        _id: prof._id,
-        name: prof.name,
-        specialization: prof.specialization,
-        subSpecialty: prof.subSpecialty,
-        bio: prof.bio,
-        rating: prof.rating,
-        reviews: prof.reviews,
-        services: prof.services,
-        nextAvailable: prof.nextAvailable,
-        online: prof.online,
-        responseTime: prof.responseTime
-      }))
+      professionals: mergedProfessionals
     });
   } catch (error) {
     console.error('Error fetching professionals:', error);
