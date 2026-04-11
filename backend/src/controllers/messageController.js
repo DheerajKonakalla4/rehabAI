@@ -1,4 +1,4 @@
-const { Message, User, PatientProfile } = require('../models');
+const { Message, User, PatientProfile, DoctorPatientRequest } = require('../models');
 
 const isDoctorPatientPair = (userA, userB) => {
   if (!userA || !userB) return false;
@@ -14,12 +14,21 @@ const hasDoctorPatientLink = async (userA, userB) => {
   const doctorUser = userA.role === 'doctor' ? userA : userB;
 
   const profile = await PatientProfile.findOne({ patientId: patientUser._id });
-  if (!profile) return false;
+  if (profile) {
+    const isAssignedDoctor = profile.assignedDoctor && profile.assignedDoctor.toString() === doctorUser._id.toString();
+    const isConnectedDoctor = (profile.connectedDoctors || []).some((entry) => entry.doctorId?.toString() === doctorUser._id.toString());
+    if (isAssignedDoctor || isConnectedDoctor) {
+      return true;
+    }
+  }
 
-  const isAssignedDoctor = profile.assignedDoctor && profile.assignedDoctor.toString() === doctorUser._id.toString();
-  const isConnectedDoctor = (profile.connectedDoctors || []).some((entry) => entry.doctorId?.toString() === doctorUser._id.toString());
+  const acceptedRequest = await DoctorPatientRequest.findOne({
+    doctorId: doctorUser._id,
+    patientId: patientUser._id,
+    status: 'accepted'
+  }).select('_id');
 
-  return isAssignedDoctor || isConnectedDoctor;
+  return Boolean(acceptedRequest);
 };
 
 // @route   POST /api/messages/send

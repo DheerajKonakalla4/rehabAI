@@ -74,8 +74,12 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   }, []);
 
+  const updateCurrentUser = useCallback((nextUser) => {
+    setUser(nextUser);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, token, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, token, login, register, logout, updateCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );

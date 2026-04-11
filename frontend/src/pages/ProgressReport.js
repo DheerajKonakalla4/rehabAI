@@ -20,6 +20,12 @@ export default function ProgressReport() {
 
   useEffect(() => {
     const fetchLogs = async () => {
+      if (user?.role && user.role !== 'patient') {
+        setError('Progress report is only available for patient accounts.');
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await patientsAPI.getExerciseLogs();
         const allLogs = response.data.logs || [];
@@ -32,7 +38,7 @@ export default function ProgressReport() {
       }
     };
     fetchLogs();
-  }, []);
+  }, [user]);
 
   const calculateStats = (logsData) => {
     if (!logsData || logsData.length === 0) {
@@ -47,7 +53,8 @@ export default function ProgressReport() {
     }
 
     const total = logsData.length;
-    const completed = logsData.filter(log => log.completed === true).length;
+    // Each exercise log represents a completed logging event for an exercise.
+    const completed = logsData.length;
     const painLevels = logsData
       .filter(log => log.painLevel !== undefined && log.painLevel !== null)
       .map(log => parseInt(log.painLevel));
@@ -220,7 +227,7 @@ export default function ProgressReport() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-semibold text-gray-800">
-                        {log.exercise?.name || 'Exercise'}
+                        {log.exerciseId?.name || 'Exercise'}
                       </p>
                       <p className="text-sm text-gray-600">
                         {new Date(log.date || log.createdAt).toLocaleDateString()}

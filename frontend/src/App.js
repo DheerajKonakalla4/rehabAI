@@ -112,7 +112,7 @@ function AppRoutes() {
         path="/progress-report"
         element={
           <ProtectedRoute>
-            <ProgressReport />
+            {user?.role === 'patient' ? <ProgressReport /> : <Navigate to="/dashboard" replace />}
           </ProtectedRoute>
         }
       />

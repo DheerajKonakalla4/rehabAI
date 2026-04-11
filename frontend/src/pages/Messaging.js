@@ -25,14 +25,17 @@ export default function Messaging() {
   const getUserId = (userRef) => {
     if (!userRef) return null;
     if (typeof userRef === 'string') return userRef;
-    return userRef._id || null;
+    return userRef._id || userRef.id || null;
   };
 
   const normalizeConversation = (conversation) => {
     if (conversation?.otherUser) {
+      const otherUserId = conversation.otherUser._id || conversation.otherUser.id || conversation.otherUser.userId;
+      const fullName = `${conversation.otherUser.firstName || ''} ${conversation.otherUser.lastName || ''}`.trim();
+
       return {
-        userId: conversation.otherUser._id,
-        userName: `${conversation.otherUser.firstName || ''} ${conversation.otherUser.lastName || ''}`.trim() || conversation.otherUser.email,
+        userId: otherUserId,
+        userName: fullName || conversation.otherUser.email || 'Unknown User',
         email: conversation.otherUser.email,
         lastMessage: conversation.lastMessage,
         lastTime: conversation.timestamp,
@@ -58,6 +61,11 @@ export default function Messaging() {
   }, [user]);
 
   const handleSelectConversation = useCallback(async (conversation) => {
+    if (!conversation?.userId) {
+      setError('Unable to open this conversation right now.');
+      return;
+    }
+
     setSelectedConversation(conversation);
     try {
       const response = await messagesAPI.getMessageHistory(conversation.userId);
@@ -72,12 +80,16 @@ export default function Messaging() {
       setLoading(true);
       const response = await messagesAPI.getInbox();
       const rawConversations = response.data.conversations || [];
-      const normalizedConversations = rawConversations.map(normalizeConversation);
+      const normalizedConversations = rawConversations
+        .map(normalizeConversation)
+        .filter((conversation) => Boolean(conversation?.userId));
       setConversations(normalizedConversations);
 
       const targetUserId = preferredUserId || preselectedUserId;
       if (targetUserId) {
-        const existing = normalizedConversations.find((conversation) => conversation.userId === targetUserId);
+        const existing = normalizedConversations.find(
+          (conversation) => String(conversation.userId) === String(targetUserId)
+        );
         if (existing) {
           await handleSelectConversation(existing);
         }

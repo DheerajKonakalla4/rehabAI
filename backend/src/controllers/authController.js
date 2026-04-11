@@ -180,6 +180,78 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// @route   PUT /api/auth/profile
+// @desc    Update logged-in user basic profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { firstName, lastName, email, phoneNumber, age } = req.body;
+
+    if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber !== '' && !isValidPhoneNumber(phoneNumber)) {
+      return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
+    }
+
+    if (age !== undefined && age !== null && age !== '' && Number.isNaN(Number(age))) {
+      return res.status(400).json({ message: 'Age must be a valid number' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : undefined;
+    if (normalizedEmail && normalizedEmail !== user.email) {
+      const existingUser = await User.findOne({ email: normalizedEmail, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email is already in use' });
+      }
+    }
+
+    if (firstName !== undefined) {
+      user.firstName = String(firstName).trim();
+    }
+
+    if (lastName !== undefined) {
+      user.lastName = String(lastName).trim();
+    }
+
+    if (normalizedEmail) {
+      user.email = normalizedEmail;
+    }
+
+    if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber !== '') {
+      user.phone = String(phoneNumber).trim();
+    }
+
+    if (age !== undefined && age !== null && age !== '') {
+      user.age = Number(age);
+    }
+
+    user.updatedAt = Date.now();
+    await user.save();
+
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        age: user.age,
+        phone: user.phone,
+        profileImage: user.profileImage
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Server error updating profile', error: error.message });
+  }
+};
+
 // @route   POST /api/auth/logout
 // @desc    Logout user
 // @access  Private

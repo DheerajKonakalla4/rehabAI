@@ -10,6 +10,9 @@ export const authAPI = {
   
   getProfile: () => 
     apiClient.get('/auth/profile'),
+
+  updateProfile: (data) =>
+    apiClient.put('/auth/profile', data),
   
   logout: () => 
     apiClient.post('/auth/logout'),

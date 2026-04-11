@@ -12,6 +12,7 @@ router.post('/reset-password', authController.resetPassword);
 
 // Private routes
 router.get('/profile', authMiddleware, authController.getProfile);
+router.put('/profile', authMiddleware, authController.updateProfile);
 router.post('/logout', authMiddleware, authController.logout);
 
 module.exports = router;

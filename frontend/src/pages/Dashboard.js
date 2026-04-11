@@ -1,10 +1,17 @@
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
+  const { t } = useLanguage();
+
+  const tx = (key, fallback) => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
+  };
 
   const handleLogout = () => {
     logout();
@@ -24,7 +31,7 @@ export default function Dashboard() {
                 onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
               >
-                Logout
+                {t('logout')}
               </button>
             </div>
           </div>
@@ -33,17 +40,17 @@ export default function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h2 className="text-3xl font-bold text-gray-800 mb-8">
-          Welcome to RehabAI Dashboard
+          {tx('mainDashboardWelcomeTitle', 'Welcome to RehabAI Dashboard')}
         </h2>
 
         {!user ? (
           <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
-            <p>Please log in to access the dashboard features.</p>
+            <p>{tx('mainDashboardLoginPrompt', 'Please log in to access the dashboard features.')}</p>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow p-6">
             <p className="text-lg text-gray-700">
-              Welcome, {user.firstName}! You are logged in as a {user.role}.
+              {tx('mainDashboardWelcomeUser', 'Welcome')}, {user.firstName}! {tx('mainDashboardLoggedInAs', 'You are logged in as')} {user.role}.
             </p>
           </div>
         )}
@@ -51,31 +58,31 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              Patients
+              {tx('mainDashboardPatients', 'Patients')}
             </h3>
-            <p className="text-gray-600 mb-4">Manage patient information and progress</p>
+            <p className="text-gray-600 mb-4">{tx('mainDashboardPatientsDesc', 'Manage patient information and progress')}</p>
             <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-              View Patients
+              {tx('mainDashboardViewPatients', 'View Patients')}
             </button>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              Exercises
+              {t('exercises')}
             </h3>
-            <p className="text-gray-600 mb-4">Browse and create rehabilitation exercises</p>
+            <p className="text-gray-600 mb-4">{tx('mainDashboardExercisesDesc', 'Browse and create rehabilitation exercises')}</p>
             <button className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-              View Exercises
+              {tx('mainDashboardViewExercises', 'View Exercises')}
             </button>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">
-              Sessions
+              {tx('mainDashboardSessions', 'Sessions')}
             </h3>
-            <p className="text-gray-600 mb-4">Track exercise sessions and progress</p>
+            <p className="text-gray-600 mb-4">{tx('mainDashboardSessionsDesc', 'Track exercise sessions and progress')}</p>
             <button className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-              View Sessions
+              {tx('mainDashboardViewSessions', 'View Sessions')}
             </button>
           </div>
         </div>

@@ -9,7 +9,7 @@ import { useLanguage } from '../context/LanguageContext';
 const isValidPhoneNumber = (value) => /^\d{10}$/.test(value);
 
 const Profile = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, updateCurrentUser } = useContext(AuthContext);
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('personal');
   const [profileData, setProfileData] = useState(null);
@@ -27,18 +27,17 @@ const Profile = () => {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const [userResponse, dashboardResponse] = await Promise.all([
-        authAPI.getProfile(),
-        patientsAPI.getDashboard()
-      ]);
+      const userResponse = await authAPI.getProfile();
+      const isPatient = userResponse?.data?.user?.role === 'patient';
+      const dashboardResponse = isPatient ? await patientsAPI.getDashboard() : null;
 
       const userData = userResponse.data.user;
-      const patientData = dashboardResponse.data.patientProfile;
+      const patientData = dashboardResponse?.data?.patientProfile || null;
 
       setProfileData({
         user: userData,
         patient: patientData,
-        stats: dashboardResponse.data.stats || {}
+        stats: dashboardResponse?.data?.stats || {}
       });
       setFormData({
         firstName: userData?.firstName || '',
@@ -102,17 +101,28 @@ const Profile = () => {
     }
 
     try {
-      const response = await patientsAPI.updateProfile({
+      const isPatient = user?.role === 'patient';
+      const payload = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-        age: formData.age,
-        injuryType: formData.injuryType,
-        rehabilitationPlan: formData.rehabilitationPlan,
-        medicalHistory: formData.medicalHistory,
-        currentConditions: formData.currentConditions
-      });
+        age: formData.age
+      };
+
+      const response = isPatient
+        ? await patientsAPI.updateProfile({
+            ...payload,
+            injuryType: formData.injuryType,
+            rehabilitationPlan: formData.rehabilitationPlan,
+            medicalHistory: formData.medicalHistory,
+            currentConditions: formData.currentConditions
+          })
+        : await authAPI.updateProfile(payload);
+
+      if (response.data.user) {
+        updateCurrentUser(response.data.user);
+      }
 
       setProfileData((currentProfile) => ({
         ...currentProfile,

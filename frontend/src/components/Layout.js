@@ -97,13 +97,15 @@ export const Navbar = () => {
                 >
                   👤 {t('profile') || 'My Profile'}
                 </Link>
-                <Link 
-                  to="/progress-report" 
-                  className="block px-4 py-2 hover:bg-blue-50 transition"
-                  onClick={() => setIsDropdownOpen(false)}
-                >
-                  📊 {t('progressReport') || 'Progress Report'}
-                </Link>
+                {user.role === 'patient' && (
+                  <Link 
+                    to="/progress-report" 
+                    className="block px-4 py-2 hover:bg-blue-50 transition"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    📊 {t('progressReport') || 'Progress Report'}
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition font-semibold"

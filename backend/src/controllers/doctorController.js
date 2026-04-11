@@ -1,4 +1,12 @@
-const { User, PatientProfile, ExerciseLog, ExerciseSession, DoctorPatientRequest, Exercise, AssignedExercise } = require('../models');
+const { User, PatientProfile, ExerciseLog, ExerciseSession, DoctorPatientRequest, Exercise, AssignedExercise, DietRecommendation } = require('../models');
+
+const isEncryptedPhoneBlob = (value) => typeof value === 'string' && /^[a-f0-9]{16,}:[a-f0-9]+$/i.test(value.trim());
+
+const sanitizePhoneValue = (value) => {
+  if (!value) return '';
+  const normalized = String(value).trim();
+  return isEncryptedPhoneBlob(normalized) ? '' : normalized;
+};
 
 // @route   GET /api/doctor/all-patients
 // @desc    Get all patients in system (for connection)
@@ -17,9 +25,15 @@ exports.getAllPatients = async (req, res) => {
       });
     }
 
+    const sanitizedPatients = allPatients.map((patient) => {
+      const patientObject = patient.toObject();
+      patientObject.phone = sanitizePhoneValue(patientObject.phone);
+      return patientObject;
+    });
+
     res.status(200).json({ 
       message: `Found ${allPatients.length} patient(s)`,
-      patients: allPatients
+      patients: sanitizedPatients
     });
   } catch (error) {
     console.error('Get all patients error:', error);
@@ -45,9 +59,78 @@ exports.getPatients = async (req, res) => {
       });
     }
 
+    const patientUserIds = patients
+      .map((profile) => profile?.patientId?._id)
+      .filter(Boolean);
+
+    const [assignedExercises, logs] = await Promise.all([
+      AssignedExercise.find({ patientId: { $in: patientUserIds } }),
+      ExerciseLog.find({ patientId: { $in: patientUserIds } })
+    ]);
+
+    const patientMetricsMap = new Map();
+    patientUserIds.forEach((userId) => {
+      patientMetricsMap.set(String(userId), {
+        totalSessions: 0,
+        completedSessions: 0,
+        pendingSessions: 0,
+        averagePainLevel: 0,
+        completionRate: 0
+      });
+    });
+
+    assignedExercises.forEach((assignment) => {
+      const key = String(assignment.patientId);
+      const metrics = patientMetricsMap.get(key);
+      if (!metrics) return;
+
+      metrics.totalSessions += 1;
+      if (assignment.status === 'completed') {
+        metrics.completedSessions += 1;
+      }
+      if (assignment.status === 'pending') {
+        metrics.pendingSessions += 1;
+      }
+    });
+
+    const painByPatient = new Map();
+    logs.forEach((log) => {
+      const key = String(log.patientId);
+      const painLevel = Number(log.painLevel);
+      if (!Number.isFinite(painLevel)) return;
+
+      const existing = painByPatient.get(key) || { total: 0, count: 0 };
+      existing.total += painLevel;
+      existing.count += 1;
+      painByPatient.set(key, existing);
+    });
+
+    patientMetricsMap.forEach((metrics, key) => {
+      const painStats = painByPatient.get(key);
+      metrics.averagePainLevel = painStats?.count ? Number((painStats.total / painStats.count).toFixed(2)) : 0;
+      metrics.completionRate = metrics.totalSessions
+        ? Math.round((metrics.completedSessions / metrics.totalSessions) * 100)
+        : 0;
+    });
+
+    const sanitizedPatients = patients.map((profile) => {
+      const profileObject = profile.toObject();
+      if (profileObject.patientId) {
+        profileObject.patientId.phone = sanitizePhoneValue(profileObject.patientId.phone);
+        profileObject.metrics = patientMetricsMap.get(String(profileObject.patientId._id)) || {
+          totalSessions: 0,
+          completedSessions: 0,
+          pendingSessions: 0,
+          averagePainLevel: 0,
+          completionRate: 0
+        };
+      }
+      return profileObject;
+    });
+
     res.status(200).json({ 
       message: `Found ${patients.length} assigned patient(s)`,
-      patients 
+      patients: sanitizedPatients
     });
   } catch (error) {
     console.error('Get patients error:', error);
@@ -181,8 +264,13 @@ exports.getPatientReport = async (req, res) => {
       ? (painLevels.reduce((a, b) => a + b, 0) / painLevels.length).toFixed(2)
       : 0;
 
+    const profileObject = patientProfile.toObject();
+    if (profileObject.patientId) {
+      profileObject.patientId.phone = sanitizePhoneValue(profileObject.patientId.phone);
+    }
+
     res.status(200).json({
-      patientProfile,
+      patientProfile: profileObject,
       stats: {
         totalSessions: sessions.length,
         completedSessions: completedSessions.length,

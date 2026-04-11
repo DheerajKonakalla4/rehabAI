@@ -109,20 +109,6 @@ const Login = () => {
               </Link>
             </p>
           </div>
-
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-600 font-semibold mb-3">DEMO ACCOUNTS:</p>
-            <div className="space-y-2 text-xs">
-              <div className="bg-blue-50 p-2 rounded">
-                <p className="font-semibold text-gray-700">Patient:</p>
-                <p className="text-gray-600">test@gmail.com / 123456789 </p>
-              </div>
-              <div className="bg-green-50 p-2 rounded">
-                <p className="font-semibold text-gray-700">Doctor:</p>
-                <p className="text-gray-600">doctor@test.com / 123456789 </p>
-              </div>
-            </div>
-          </div>
         </Card>
 
         <p className="text-center text-blue-100 text-xs mt-6">
