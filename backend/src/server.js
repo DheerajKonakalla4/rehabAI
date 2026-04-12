@@ -4,6 +4,8 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const { seedExercises } = require('../seeds/exercises');
 
+const isVercel = process.env.VERCEL === '1';
+
 // Load environment variables
 dotenv.config();
 
@@ -46,7 +48,9 @@ app.use('/api/advanced', require('./routes/advancedFeatures'));
 
 // Initialize Background Tasks
 const startCronJobs = require('./utils/cronJobs');
-startCronJobs();
+if (!isVercel) {
+  startCronJobs();
+}
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -69,8 +73,10 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`RehabAI Backend Server is running on port ${PORT}`);
-});
+if (!isVercel) {
+  app.listen(PORT, () => {
+    console.log(`RehabAI Backend Server is running on port ${PORT}`);
+  });
+}
 
 module.exports = app;
