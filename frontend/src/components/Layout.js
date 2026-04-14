@@ -16,85 +16,79 @@ export const Navbar = () => {
   if (!user) return null;
 
   return (
-    <nav className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg sticky top-0 z-40">
+    <nav className="glass-panel text-slate-200 shadow-xl sticky top-0 z-40 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-        <Link to="/dashboard" className="text-2xl font-bold hover:text-blue-100 transition">
-          🏥 RehabAI
+        <Link to="/dashboard" className="text-2xl font-extrabold tracking-tight flex items-center gap-2 hover:text-indigo-400 transition-colors drop-shadow-md">
+          <span className="text-indigo-500">❖</span> RehabAI
         </Link>
         
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-6 text-sm font-medium">
           <Link 
             to="/dashboard" 
-            className="hover:text-blue-100 transition font-semibold"
+            className="hover:text-indigo-400 transition-colors"
           >
             Dashboard
           </Link>
           
           {user.role === 'patient' && (
             <>
-              <Link 
-                to="/exercise-library" 
-                className="hover:text-blue-100 transition font-semibold"
-              >
-                Exercises
-              </Link>
-              <Link 
-                to="/chat" 
-                className="hover:text-blue-100 transition font-semibold"
-              >
-                Chat
-              </Link>
-              <Link 
-                to="/support" 
-                className="hover:text-blue-100 transition font-semibold"
-              >
-                Support
-              </Link>
-              <Link 
-                to="/messaging" 
-                className="hover:text-blue-100 transition font-semibold"
-              >
-                Messages
-              </Link>
+              <Link to="/sessions" className="hover:text-indigo-400 transition-colors">📅 Sessions</Link>
+              <Link to="/exercise-tracking" className="hover:text-indigo-400 transition-colors">📐 Tracking</Link>
+              <Link to="/ai-rehab-plan" className="hover:text-indigo-400 transition-colors">🤖 AI Plan</Link>
+              <Link to="/doctor-patient-chat" className="hover:text-indigo-400 transition-colors">💬 Doctor Chat</Link>
+              <Link to="/chat" className="hover:text-indigo-400 transition-colors">🧠 AI Assistant</Link>
             </>
+          )}
+
+          {(user.role === 'doctor' || user.role === 'physiotherapist') && (
+            <Link 
+              to="/doctor-patient-chat" 
+              className="hover:text-blue-100 transition font-semibold"
+            >
+              💬 Patient Chat
+            </Link>
           )}
 
           <div className="relative">
             <button 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2 hover:bg-blue-700 px-3 py-2 rounded-lg transition"
+              className="flex items-center gap-2 hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-slate-700"
             >
-              <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" className="border-2 border-white" />
-              <span className="hidden sm:inline">{user.firstName}</span>
+              <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" className="ring-2 ring-indigo-500/50" />
+              <span className="hidden sm:inline tracking-wide">{user.firstName}</span>
               <span className="text-xl">▼</span>
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-lg shadow-xl py-2 z-50">
-                <div className="px-4 py-2 border-b border-gray-200">
-                  <p className="font-semibold">{user.firstName} {user.lastName}</p>
-                  <p className="text-sm text-gray-600 capitalize">{user.role}</p>
+              <div className="absolute right-0 mt-3 w-56 glass-card overflow-hidden z-50 animate-fade-in-up">
+                <div className="px-4 py-3 border-b border-slate-700/50 bg-slate-800/80">
+                  <p className="font-semibold text-white">{user.firstName} {user.lastName}</p>
+                  <p className="text-xs text-indigo-400 font-medium tracking-wider uppercase mt-1">{user.role}</p>
                 </div>
-                <Link 
-                  to="/profile" 
-                  className="block px-4 py-2 hover:bg-blue-50 transition"
-                  onClick={() => setIsDropdownOpen(false)}
-                >
-                  👤 My Profile
-                </Link>
-                <Link 
-                  to="/progress-report" 
-                  className="block px-4 py-2 hover:bg-blue-50 transition"
-                  onClick={() => setIsDropdownOpen(false)}
-                >
-                  📊 Progress Report
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 transition font-semibold"
-                >
-                  🚪 Logout
-                </button>
+                <div className="py-1">
+                  <Link 
+                    to="/profile" 
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-slate-700/50 transition-colors text-slate-300 hover:text-white"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    👤 My Profile
+                  </Link>
+                  <Link 
+                    to="/progress-report" 
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-slate-700/50 transition-colors text-slate-300 hover:text-white"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    📊 Progress Report
+                  </Link>
+                </div>
+                <div className="border-t border-slate-700/50 py-1">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    🚪 Logout
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -128,24 +122,24 @@ export const Sidebar = ({ items, activeItem }) => (
 );
 
 export const PageHeader = ({ title, subtitle, action }) => (
-  <div className="mb-8">
-    <h1 className="text-4xl font-bold text-gray-800 mb-2">{title}</h1>
-    {subtitle && <p className="text-gray-600 text-lg">{subtitle}</p>}
+  <div className="mb-8 animate-fade-in-up">
+    <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-100 to-slate-400 mb-2 drop-shadow-sm">{title}</h1>
+    {subtitle && <p className="text-slate-400 text-lg">{subtitle}</p>}
     {action && <div className="mt-4">{action}</div>}
   </div>
 );
 
 export const TabBar = ({ tabs, activeTab, onChange }) => (
-  <div className="border-b border-gray-200 mb-6">
-    <div className="flex gap-8">
+  <div className="border-b border-slate-700/50 mb-6">
+    <div className="flex gap-8 overflow-x-auto scrollbar-thin">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
-          className={`pb-3 font-semibold transition border-b-2 ${
+          className={`pb-3 font-semibold transition-all whitespace-nowrap border-b-2 px-1 ${
             activeTab === tab.id
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-800'
+              ? 'border-indigo-500 text-indigo-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600'
           }`}
         >
           {tab.label}

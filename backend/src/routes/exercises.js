@@ -23,11 +23,13 @@ router.get('/bodypart/:bodyPart', authMiddleware, getExercisesByBodyPart);
 // GET /api/exercises/:id - Get exercise details
 router.get('/:id', authMiddleware, getExerciseById);
 
+const upload = require('../middleware/upload');
+
 // POST /api/exercises - Create new exercise
-router.post('/', authMiddleware, roleMiddleware('physiotherapist', 'doctor'), createExercise);
+router.post('/', authMiddleware, roleMiddleware('physiotherapist', 'doctor'), upload.single('video'), createExercise);
 
 // PUT /api/exercises/:id - Update exercise
-router.put('/:id', authMiddleware, roleMiddleware('physiotherapist', 'doctor'), updateExercise);
+router.put('/:id', authMiddleware, roleMiddleware('physiotherapist', 'doctor'), upload.single('video'), updateExercise);
 
 // DELETE /api/exercises/:id - Delete exercise
 router.delete('/:id', authMiddleware, roleMiddleware('physiotherapist', 'doctor'), deleteExercise);

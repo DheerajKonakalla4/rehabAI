@@ -106,10 +106,15 @@ exports.getExercisesByBodyPart = async (req, res) => {
 // Create new exercise (admin/doctor only)
 exports.createExercise = async (req, res) => {
   try {
-    const { name, description, category, bodyParts, instructions, duration, repetitions, difficulty, imageUrl, videoUrl } = req.body;
+    const { name, description, category, bodyParts, instructions, duration, repetitions, difficulty, imageUrl } = req.body;
+    let { videoUrl } = req.body;
 
     if (!name || !category) {
       return res.status(400).json({ success: false, message: 'Name and category are required' });
+    }
+
+    if (req.file) {
+      videoUrl = `/uploads/${req.file.filename}`;
     }
 
     const exercise = new Exercise({

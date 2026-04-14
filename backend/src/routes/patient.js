@@ -19,8 +19,11 @@ router.get('/exercise-logs', patientController.getExerciseLogs);
 // POST /api/patient/exercise-log - Log completed exercise
 router.post('/exercise-log', patientController.logExercise);
 
+// POST /api/patient/daily-log - Log daily pain and mood
+router.post('/daily-log', patientController.addDailyLog);
+
 // GET /api/patient/profile - Get patient profile
-router.get('/profile', patientController.getDashboard);
+router.get('/profile', patientController.getProfile);
 
 // PUT /api/patient/profile - Update patient profile
 router.put('/profile', patientController.updateProfile);

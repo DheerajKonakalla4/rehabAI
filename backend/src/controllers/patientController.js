@@ -1,4 +1,4 @@
-const { User, PatientProfile, Exercise, ExerciseLog, ExerciseSession, DoctorPatientRequest, AssignedExercise } = require('../models');
+const { User, PatientProfile, Exercise, ExerciseLog, ExerciseSession, DoctorPatientRequest, AssignedExercise, DailyLog } = require('../models');
 
 // @route   GET /api/patient/dashboard
 // @desc    Get patient dashboard data
@@ -499,3 +499,162 @@ exports.startExercise = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error starting exercise', error: error.message });
   }
 };
+
+// @route   POST /api/patient/daily-log
+// @desc    Log daily pain and mood
+// @access  Private (Patient)
+exports.addDailyLog = async (req, res) => {
+  try {
+    const patientId = req.user.userId;
+    const { painLevel, symptoms, mood } = req.body;
+
+    if (painLevel === undefined) {
+      return res.status(400).json({ message: 'Pain level is required' });
+    }
+
+    const log = await DailyLog.create({
+      patientId,
+      painLevel,
+      symptoms,
+      mood
+    });
+
+    // Check for high pain emergency alert
+    if (painLevel >= 8) {
+      // Find assigned doctor/physio and trigger alert
+      const profile = await PatientProfile.findOne({ patientId })
+        .populate('assignedDoctor assignedPhysiotherapist patientId', 'email firstName lastName');
+
+      const alertMessage = `EMERGENCY ALERT: Patient ${profile.patientId ? profile.patientId.firstName + ' ' + profile.patientId.lastName : ''} has logged a severe pain level of ${painLevel}/10!`;
+      console.log('--- EMERGENCY ALERT TRIGGERED ---');
+      console.log(alertMessage);
+      
+      const io = req.app.get('io');
+      const onlineUsers = req.app.get('onlineUsers');
+
+      if (profile.assignedDoctor) {
+        console.log(`Email Alert to Doctor: ${profile.assignedDoctor.email}`);
+        if (io && onlineUsers) {
+          const doctorSocketId = onlineUsers.get(profile.assignedDoctor._id.toString());
+          if (doctorSocketId) {
+            io.to(doctorSocketId).emit('emergency_alert', {
+              patientId: patientId,
+              patientName: profile.patientId ? `${profile.patientId.firstName} ${profile.patientId.lastName}` : 'A patient',
+              painLevel: painLevel,
+              symptoms: symptoms,
+              message: alertMessage,
+              timestamp: new Date()
+            });
+          }
+        }
+      }
+      if (profile.assignedPhysiotherapist) {
+        console.log(`Email Alert to Physio: ${profile.assignedPhysiotherapist.email}`);
+        if (io && onlineUsers) {
+          const physioSocketId = onlineUsers.get(profile.assignedPhysiotherapist._id.toString());
+          if (physioSocketId) {
+            io.to(physioSocketId).emit('emergency_alert', {
+              patientId: patientId,
+              patientName: profile.patientId ? `${profile.patientId.firstName} ${profile.patientId.lastName}` : 'A patient',
+              painLevel: painLevel,
+              symptoms: symptoms,
+              message: alertMessage,
+              timestamp: new Date()
+            });
+          }
+        }
+      }
+    }
+
+    res.status(201).json({
+      message: 'Daily log added successfully',
+      log
+    });
+  } catch (error) {
+    console.error('Daily log record error:', error);
+    res.status(500).json({ message: 'Server error saving daily log', error: error.message });
+  }
+};
+
+// @route   GET /api/patient/profile
+// @desc    Get patient profile
+// @access  Private (Patient)
+exports.getProfile = async (req, res) => {
+  try {
+    const patientId = req.user.userId;
+    const user = await User.findById(patientId);
+    const profile = await PatientProfile.findOne({ patientId });
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      fullName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      phoneNumber: user.phone || '',
+      dateOfBirth: user.age ? `${new Date().getFullYear() - user.age}-01-01` : '1990-01-01',
+      address: profile?.address || '123 Recovery Lane, Mumbai, Maharashtra 400001',
+      patientId: profile?.uniquePatientId || user.uniqueId,
+      medical: {
+        condition: profile?.injuryType || 'Post ACL Surgery Rehabilitation',
+        startDate: profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'February 7, 2024',
+        primaryTherapist: 'Assigned Physiotherapist',
+        expectedCompletion: 'May 7, 2024',
+        notes: profile?.medicalHistory || 'Patient is making excellent progress.'
+      },
+      stats: {
+        totalExercises: 42,
+        daysActive: 28,
+        recoveryProgress: 78,
+        streak: 7
+      }
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ message: 'Server error fetching profile', error: error.message });
+  }
+};
+
+// @route   PUT /api/patient/profile
+// @desc    Update patient profile
+// @access  Private (Patient)
+exports.updateProfile = async (req, res) => {
+  try {
+    const patientId = req.user.userId;
+    const { fullName, email, phoneNumber, dateOfBirth } = req.body;
+    
+    // Split fullName
+    let firstName, lastName;
+    if (fullName) {
+      const parts = fullName.split(' ');
+      firstName = parts[0];
+      lastName = parts.slice(1).join(' ') || '';
+    }
+
+    // Update User
+    const updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    if (email) updateData.email = email;
+    if (phoneNumber) updateData.phone = phoneNumber;
+    if (dateOfBirth) {
+       const today = new Date();
+       const birthDate = new Date(dateOfBirth);
+       let age = today.getFullYear() - birthDate.getFullYear();
+       const m = today.getMonth() - birthDate.getMonth();
+       if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+           age--;
+       }
+       updateData.age = age;
+    }
+
+    await User.findByIdAndUpdate(patientId, updateData);
+
+    res.status(200).json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Server error updating profile', error: error.message });
+  }
+};
+

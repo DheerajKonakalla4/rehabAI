@@ -26,6 +26,9 @@ export const patientsAPI = {
   logExercise: (data) => 
     apiClient.post('/patient/exercise-log', data),
   
+  logDailyHealth: (data) =>
+    apiClient.post('/patient/daily-log', data),
+  
   getExerciseLogs: () => 
     apiClient.get('/patient/exercise-logs'),
   
@@ -190,4 +193,10 @@ export const sessionsAPI = {
   
   updateSession: (id, data) => 
     apiClient.put(`/sessions/${id}`, data),
+};
+
+// Conversations API (Doctor-Patient Chat)
+export const conversationsAPI = {
+  getContacts: () => 
+    apiClient.get('/conversations/contacts'),
 };

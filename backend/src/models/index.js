@@ -12,5 +12,6 @@ module.exports = {
   DoctorPatientRequest: require('./DoctorPatientRequest'),
   Achievement: require('./Achievement'),
   ChatMessage: require('./ChatMessage'),
-  Professional: require('./Professional')
+  Professional: require('./Professional'),
+  DailyLog: require('./DailyLog')
 };

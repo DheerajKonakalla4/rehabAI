@@ -56,7 +56,7 @@ const AIChatAssistant = () => {
 
     try {
       // Send to backend API
-      const response = await apiClient.post('/api/chat/message', {
+      const response = await apiClient.post('/chat/message', {
         message: inputValue,
         userId: user._id
       });
@@ -98,7 +98,7 @@ const AIChatAssistant = () => {
     setLoading(true);
 
     try {
-      const response = await apiClient.post('/api/chat/message', {
+      const response = await apiClient.post('/chat/message', {
         message: question,
         userId: user._id
       });
@@ -151,35 +151,36 @@ const AIChatAssistant = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen relative flex flex-col">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
       <Navbar />
 
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 py-8">
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 py-8 relative z-10">
         {/* Page Header */}
         <PageHeader
-          title="AI Chat Assistant"
+          title="🤖 AI Chat Assistant"
           subtitle="Get instant answers to your rehabilitation questions"
         />
 
         {/* Chat Container */}
-        <Card className="flex-1 flex flex-col min-h-96 mb-6">
+        <Card className="flex-1 flex flex-col min-h-96 mb-6 glass-panel border border-slate-700/50">
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto mb-6 space-y-4 pr-2">
+          <div className="flex-1 overflow-y-auto mb-6 space-y-4 pr-2 scrollbar-thin">
             {messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
+                  className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
                     message.type === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-none'
-                      : 'bg-gray-200 text-gray-800 rounded-bl-none'
+                      ? 'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-br-sm shadow-[0_0_15px_rgba(99,102,241,0.3)]'
+                      : 'bg-slate-800/80 border border-slate-700 text-slate-200 rounded-bl-sm backdrop-blur-md'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap text-sm">{message.content}</p>
-                  <p className={`text-xs mt-1 ${
-                    message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: message.content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}}></div>
+                  <p className={`text-xs mt-2 text-right ${
+                    message.type === 'user' ? 'text-indigo-200' : 'text-slate-400'
                   }`}>
                     {formatTime(message.timestamp)}
                   </p>
@@ -188,11 +189,11 @@ const AIChatAssistant = () => {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-gray-200 text-gray-800 px-4 py-3 rounded-lg rounded-bl-none">
+                <div className="bg-slate-800/80 border border-slate-700 text-slate-200 px-4 py-3 rounded-2xl rounded-bl-sm backdrop-blur-md">
                   <div className="flex space-x-2">
-                    <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce"></div>
-                    <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="h-2 w-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                    <div className="h-2 w-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="h-2 w-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
               </div>
@@ -203,13 +204,13 @@ const AIChatAssistant = () => {
           {/* Quick Questions (show when no message history beyond welcome) */}
           {messages.length === 1 && (
             <div className="mb-6">
-              <p className="text-sm text-gray-600 mb-3 font-semibold">Quick questions:</p>
+              <p className="text-sm text-slate-400 mb-3 font-semibold uppercase tracking-wider">Quick questions:</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {quickQuestions.map((question, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleQuickQuestion(question)}
-                    className="text-left p-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-sm text-gray-700"
+                    className="text-left p-3 glass-card hover:bg-slate-700/50 transition-colors text-sm text-slate-300 font-medium"
                   >
                     {question}
                   </button>
@@ -219,14 +220,14 @@ const AIChatAssistant = () => {
           )}
 
           {/* Input Area */}
-          <form onSubmit={handleSendMessage} className="mt-6 pt-6 border-t">
+          <form onSubmit={handleSendMessage} className="mt-6 pt-6 border-t border-slate-700/50">
             <div className="flex gap-2">
-              <Input
+              <input
                 placeholder="Type your message..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 disabled={loading}
-                className="flex-1"
+                className="flex-1 premium-input"
               />
               <Button
                 type="submit"
@@ -237,7 +238,7 @@ const AIChatAssistant = () => {
                 {loading ? '...' : 'Send'}
               </Button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Press Enter to send, Shift + Enter for new line</p>
+            <p className="text-xs text-slate-500 mt-3 font-medium">Press Enter to send, Shift + Enter for new line</p>
           </form>
         </Card>
       </div>

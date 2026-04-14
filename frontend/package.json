@@ -4,18 +4,23 @@
   "private": true,
   "proxy": "http://localhost:5000",
   "dependencies": {
+    "@tensorflow-models/pose-detection": "^2.1.3",
+    "@tensorflow/tfjs": "^4.22.0",
+    "autoprefixer": "^10.4.16",
+    "axios": "^1.5.0",
+    "postcss": "^8.4.31",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.16.0",
-    "axios": "^1.5.0",
-    "tailwindcss": "^3.3.0",
-    "postcss": "^8.4.31",
-    "autoprefixer": "^10.4.16"
+    "react-webcam": "^7.2.0",
+    "recharts": "^3.8.1",
+    "socket.io-client": "^4.8.3",
+    "tailwindcss": "^3.3.0"
   },
   "devDependencies": {
+    "eslint": "^8.49.0",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4",
-    "eslint": "^8.49.0"
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",

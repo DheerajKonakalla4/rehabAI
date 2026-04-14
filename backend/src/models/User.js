@@ -45,6 +45,12 @@ const userSchema = new mongoose.Schema({
   passwordResetToken: String,
   passwordResetOtp: String,
   passwordResetOtpExpires: Date,
+  // MFA fields
+  isMfaEnabled: {
+    type: Boolean,
+    default: false
+  },
+  mfaSecret: String,
   createdAt: {
     type: Date,
     default: Date.now

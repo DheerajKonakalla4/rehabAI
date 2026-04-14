@@ -84,184 +84,218 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 flex items-center justify-center py-12 px-4">
-      {/* Decorative elements */}
-      <div className="absolute top-0 left-0 w-40 h-40 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-0 right-0 w-40 h-40 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+    <div className="min-h-screen relative flex items-center justify-center py-12 px-4 overflow-hidden bg-[#0a0a1a]">
+      {/* Background Ambient Glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px] animate-pulse [animation-delay:2s]"></div>
+      
+      {/* Subtle Grid Pattern Overlay */}
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
 
-      <div className="w-full max-w-md z-10">
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2">
-            🏥 RehabAI
+      <div className="w-full max-w-md z-10 animate-fade-in-up">
+        <div className="text-center mb-10">
+          <h1 className="text-6xl font-black text-white mb-3 tracking-tighter drop-shadow-2xl">
+            🏥 Rehab<span className="text-indigo-500">AI</span>
           </h1>
-          <p className="text-blue-100 text-lg">
-            Reset Your Password
+          <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">
+            Recovery Access Portal
           </p>
         </div>
 
-        <Card className="backdrop-blur-md bg-white/95">
+        <Card className="glass-panel border-slate-700/50 p-8 shadow-2xl relative overflow-hidden">
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
+
           {/* Step Indicator */}
-          <div className="flex justify-between mb-8">
-            <div className={`flex flex-col items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                1
-              </div>
-              <p className="text-xs mt-1">Email</p>
+          <div className="flex items-center justify-between mb-10 px-2 relative">
+            <div className="absolute top-5 left-10 right-10 h-[2px] bg-slate-800/50 -z-0">
+              <div 
+                className="h-full bg-indigo-500 transition-all duration-700"
+                style={{ width: `${step === 1 ? '0%' : step === 2 ? '50%' : '100%'}` }}
+              ></div>
             </div>
-            <div className={`flex-1 h-1 mx-2 mt-4 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-            <div className={`flex flex-col items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                2
+            
+            {[1, 2, 3].map((s) => (
+              <div key={s} className="flex flex-col items-center relative z-10">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm transition-all duration-500 border-2 ${
+                  step === s 
+                    ? 'bg-indigo-600 border-indigo-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)] scale-110' 
+                    : step > s 
+                      ? 'bg-green-500/20 border-green-500/50 text-green-400'
+                      : 'bg-slate-900 border-slate-700 text-slate-500'
+                }`}>
+                  {step > s ? '✓' : s}
+                </div>
+                <p className={`text-[9px] font-black uppercase tracking-widest mt-2 transition-colors ${
+                  step === s ? 'text-indigo-400' : 'text-slate-600'
+                }`}>
+                  {s === 1 ? 'Email' : s === 2 ? 'Verify' : 'Reset'}
+                </p>
               </div>
-              <p className="text-xs mt-1">OTP</p>
-            </div>
-            <div className={`flex-1 h-1 mx-2 mt-4 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-            <div className={`flex flex-col items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                3
-              </div>
-              <p className="text-xs mt-1">Reset</p>
-            </div>
+            ))}
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            {step === 1 && 'Enter Your Email'}
-            {step === 2 && 'Verify OTP'}
-            {step === 3 && 'Create New Password'}
-          </h2>
+          <div className="mb-8">
+            <h2 className="text-3xl font-black text-white tracking-tight">
+              {step === 1 && 'Identify Account'}
+              {step === 2 && 'Verify Security'}
+              {step === 3 && 'New Credentials'}
+            </h2>
+            <p className="text-slate-500 text-sm mt-1 font-medium">
+              {step === 1 && 'Enter your email to receive an OTP'}
+              {step === 2 && 'Check your inbox for the 6-digit code'}
+              {step === 3 && 'Choose a strong, unique password'}
+            </p>
+          </div>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 font-semibold text-sm">{error}</p>
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl animate-shake">
+              <p className="text-red-400 font-bold text-xs flex items-center gap-2">
+                <span>⚠️</span> {error}
+              </p>
             </div>
           )}
 
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-700 font-semibold text-sm">{success}</p>
+          {success && step !== 3 && (
+            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-2xl animate-fade-in">
+              <p className="text-green-400 font-bold text-[11px] flex items-start gap-2">
+                <span className="mt-0.5">ℹ️</span> {success}
+              </p>
             </div>
           )}
 
           {/* Step 1: Email */}
           {step === 1 && (
-            <form onSubmit={handleEmailSubmit} className="space-y-5">
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="Enter your registered email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setError('');
-                }}
-                required
-              />
+            <form onSubmit={handleEmailSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
+                <input
+                  type="email"
+                  placeholder="doctor@test.com"
+                  className="premium-input px-5 h-14"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError('');
+                  }}
+                  required
+                />
+              </div>
               
               <Button 
                 variant="primary" 
                 type="submit" 
-                loading={loading}
-                className="w-full"
+                disabled={loading}
+                className="w-full h-14 text-base font-black shadow-indigo-500/20 shadow-xl"
               >
-                {loading ? 'Sending...' : 'Send OTP'}
+                {loading ? 'SENDING OTP...' : 'REQUEST RESET CODE'}
               </Button>
             </form>
           )}
 
           {/* Step 2: OTP */}
           {step === 2 && (
-            <form onSubmit={handleOtpSubmit} className="space-y-5">
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-                <p className="text-sm text-gray-700">
-                  We've sent an OTP to <span className="font-semibold">{email}</span>
+            <form onSubmit={handleOtpSubmit} className="space-y-6 animate-fade-in-up">
+              <div className="bg-indigo-500/5 p-4 rounded-2xl border border-indigo-500/20 mb-4">
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  We've dispatched a secure code to: <br/>
+                  <span className="font-black text-indigo-300 ml-1">{email}</span>
                 </p>
               </div>
               
-              <Input
-                label="OTP Code"
-                type="text"
-                placeholder="Enter the 6-digit OTP"
-                value={otp}
-                onChange={(e) => {
-                  setOtp(e.target.value);
-                  setError('');
-                }}
-                required
-              />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">OTP CODE</label>
+                <input
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  className="premium-input px-5 h-14 text-center tracking-[0.5em] text-lg font-black"
+                  maxLength="6"
+                  value={otp}
+                  onChange={(e) => {
+                    setOtp(e.target.value);
+                    setError('');
+                  }}
+                  required
+                />
+              </div>
               
               <Button 
                 variant="primary" 
                 type="submit" 
-                loading={loading}
-                className="w-full"
+                disabled={loading}
+                className="w-full h-14 text-base font-black shadow-indigo-500/20 shadow-xl"
               >
-                {loading ? 'Verifying...' : 'Verify OTP'}
+                {loading ? 'VERIFYING...' : 'CONFIRM OTP'}
               </Button>
               
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-full text-blue-600 hover:text-blue-700 font-medium text-sm mt-2"
+                className="w-full text-indigo-400 hover:text-indigo-300 font-black text-[10px] uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
               >
-                Back to Email
+                <span>←</span> Back to Email
               </button>
             </form>
           )}
 
           {/* Step 3: Reset Password */}
           {step === 3 && (
-            <form onSubmit={handlePasswordReset} className="space-y-5">
-              <Input
-                label="New Password"
-                type="password"
-                placeholder="Enter your new password"
-                value={newPassword}
-                onChange={(e) => {
-                  setNewPassword(e.target.value);
-                  setError('');
-                }}
-                required
-              />
+            <form onSubmit={handlePasswordReset} className="space-y-6 animate-fade-in-up">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">New Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  className="premium-input px-5 h-14"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setError('');
+                  }}
+                  required
+                />
+              </div>
               
-              <Input
-                label="Confirm Password"
-                type="password"
-                placeholder="Confirm your new password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setError('');
-                }}
-                required
-              />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Confirm New Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  className="premium-input px-5 h-14"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setError('');
+                  }}
+                  required
+                />
+              </div>
               
               <Button 
                 variant="primary" 
                 type="submit" 
-                loading={loading}
-                className="w-full"
+                disabled={loading}
+                className="w-full h-14 text-base font-black shadow-indigo-500/20 shadow-xl"
               >
-                {loading ? 'Resetting...' : 'Reset Password'}
+                {loading ? 'RESETTING...' : 'UPDATE PASSWORD'}
               </Button>
             </form>
           )}
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
-              Remember your password?{' '}
-              <Link to="/login" className="text-blue-600 font-semibold hover:text-blue-700 transition">
-                Back to login
-              </Link>
-            </p>
+          <div className="mt-8 text-center pt-6 border-t border-slate-800/50">
+            <Link to="/login" className="text-indigo-400 font-black hover:text-indigo-300 transition-colors text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+              <span>🔒</span> Return to Login
+            </Link>
           </div>
         </Card>
 
-        <p className="text-center text-blue-100 text-xs mt-6">
-          Secure • HIPAA Compliant • Your health data is protected
+        <p className="text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-8">
+          Self-Service Identity Management
         </p>
       </div>
     </div>
   );
+
 };
 
 export default ForgotPassword;

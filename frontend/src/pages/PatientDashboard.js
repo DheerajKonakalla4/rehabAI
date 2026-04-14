@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Navbar, PageHeader, TabBar } from '../components/Layout';
 import { 
@@ -12,6 +13,7 @@ import {
 import { patientsAPI } from '../services/api';
 
 const PatientDashboard = () => {
+  const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboardData, setDashboardData] = useState(null);
@@ -21,6 +23,8 @@ const PatientDashboard = () => {
   const [exerciseLogs, setExerciseLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completingExerciseId, setCompletingExerciseId] = useState(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [dailyLog, setDailyLog] = useState({ painLevel: 5, mood: 'Okay', symptoms: '' });
 
   useEffect(() => {
     fetchData();
@@ -67,6 +71,17 @@ const PatientDashboard = () => {
       fetchData();
     } catch (error) {
       alert('Error: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleSubmitDailyLog = async (e) => {
+    e.preventDefault();
+    try {
+      await patientsAPI.logDailyHealth(dailyLog);
+      alert('Daily log submitted! If pain is severe, your therapist has been notified.');
+      setShowLogModal(false);
+    } catch (error) {
+      alert('Error submitting daily log: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -119,34 +134,98 @@ const PatientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen relative">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <PageHeader 
-          title={`Welcome, ${user?.firstName}! 👋`}
-          subtitle="Your recovery progress and treatment plans"
-        />
+      <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
+        <div className="flex justify-between items-center mb-6">
+          <PageHeader 
+            title={`Welcome, ${user?.firstName}! 👋`}
+            subtitle="Your recovery progress and treatment plans"
+          />
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => navigate('/sessions')}>
+              📅 Book Session
+            </Button>
+            <Button variant="secondary" onClick={() => navigate('/ai-rehab-plan')}>
+              🤖 Generate AI Plan
+            </Button>
+            <Button variant="primary" onClick={() => setShowLogModal(true)}>
+              📝 Log Daily Health
+            </Button>
+          </div>
+        </div>
 
         <StatsGrid stats={stats} />
         <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+
+        {/* Daily Log Modal */}
+        {showLogModal && (
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in-up">
+            <div className="glass-card max-w-md w-full border border-slate-700/80">
+              <h2 className="text-2xl font-bold mb-4 text-slate-100">Log Daily Health</h2>
+              <form onSubmit={handleSubmitDailyLog}>
+                <div className="mb-4">
+                  <label className="block text-slate-300 font-medium mb-2">Pain Level (1-10)</label>
+                  <input 
+                    type="range" min="1" max="10" 
+                    value={dailyLog.painLevel}
+                    onChange={(e) => setDailyLog({...dailyLog, painLevel: parseInt(e.target.value)})}
+                    className="w-full accent-indigo-500" 
+                  />
+                  <div className="text-center font-bold text-2xl text-indigo-400 drop-shadow-sm">{dailyLog.painLevel}</div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-slate-300 font-medium mb-2">Mood</label>
+                  <select 
+                    value={dailyLog.mood}
+                    onChange={(e) => setDailyLog({...dailyLog, mood: e.target.value})}
+                    className="premium-input bg-slate-800"
+                  >
+                    <option value="Great">Great</option>
+                    <option value="Good">Good</option>
+                    <option value="Okay">Okay</option>
+                    <option value="Bad">Bad</option>
+                    <option value="Terrible">Terrible</option>
+                  </select>
+                </div>
+                <div className="mb-6">
+                  <label className="block text-slate-300 font-medium mb-2">Symptoms/Notes</label>
+                  <textarea 
+                    value={dailyLog.symptoms}
+                    onChange={(e) => setDailyLog({...dailyLog, symptoms: e.target.value})}
+                    className="premium-input"
+                    rows="3"
+                  ></textarea>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => setShowLogModal(false)}>Cancel</Button>
+                  <Button variant="primary" type="submit">Submit Log</Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Assigned Doctor Card */}
-            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">👨‍⚕️ Your Medical Professional</h2>
+            <Card className="bg-gradient-to-br from-indigo-900/40 to-slate-800/80 border-indigo-500/20">
+              <h2 className="text-xl font-bold text-indigo-300 mb-4 flex items-center gap-2">
+                <span>👨‍⚕️</span> Your Medical Professional
+              </h2>
               {assignedDoctor ? (
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    <h3 className="text-2xl font-bold text-slate-100 mb-2">
                       Dr. {assignedDoctor.firstName} {assignedDoctor.lastName}
                     </h3>
-                    <p className="text-gray-700 mb-1">{assignedDoctor.email}</p>
-                    <p className="text-gray-700">{assignedDoctor.phone}</p>
+                    <p className="text-slate-400 mb-1">{assignedDoctor.email}</p>
+                    <p className="text-slate-400">{assignedDoctor.phone}</p>
                   </div>
-                  <Button variant="primary">
+                  <Button variant="primary" onClick={() => navigate('/doctor-patient-chat')}>
                     📧 Contact Doctor
                   </Button>
                 </div>
@@ -162,55 +241,59 @@ const PatientDashboard = () => {
             {/* Progress Summary */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Exercise Progress Card */}
-              <Card className="p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">📊 Exercise Progress</h2>
+              <Card>
+                <h2 className="text-xl font-bold text-slate-100 mb-6 flex items-center gap-2">
+                  <span>📊</span> Exercise Progress
+                </h2>
                 
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-700 font-semibold">Overall Progress</span>
-                    <span className="text-3xl font-bold text-blue-600">{progressPercentage}%</span>
+                <div className="mb-8">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-slate-400 font-medium tracking-wide text-sm uppercase">Overall Completion</span>
+                    <span className="text-3xl font-bold text-indigo-400">{progressPercentage}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden border border-slate-600/50">
                     <div 
-                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-teal-400 to-indigo-500 h-3 rounded-full transition-all duration-1000 ease-out"
                       style={{ width: `${progressPercentage}%` }}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <p className="text-gray-600 text-sm font-medium">Total</p>
-                    <p className="text-3xl font-bold text-blue-600 mt-2">{assignedExercises.length}</p>
+                  <div className="text-center p-4 bg-slate-800/80 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
+                    <p className="text-slate-400 text-xs font-semibold tracking-wider uppercase">Total</p>
+                    <p className="text-2xl font-bold text-indigo-400 mt-1">{assignedExercises.length}</p>
                   </div>
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <p className="text-gray-600 text-sm font-medium">Pending</p>
-                    <p className="text-3xl font-bold text-yellow-600 mt-2">{pendingCount}</p>
+                  <div className="text-center p-4 bg-slate-800/80 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
+                    <p className="text-slate-400 text-xs font-semibold tracking-wider uppercase">Pending</p>
+                    <p className="text-2xl font-bold text-amber-400 mt-1">{pendingCount}</p>
                   </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <p className="text-gray-600 text-sm font-medium">Completed</p>
-                    <p className="text-3xl font-bold text-green-600 mt-2">{completedCount}</p>
+                  <div className="text-center p-4 bg-slate-800/80 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
+                    <p className="text-slate-400 text-xs font-semibold tracking-wider uppercase">Completed</p>
+                    <p className="text-2xl font-bold text-teal-400 mt-1">{completedCount}</p>
                   </div>
                 </div>
               </Card>
 
               {/* Recent Activity */}
-              <Card className="p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">📋 Recent Activity</h2>
+              <Card>
+                <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+                  <span>📋</span> Recent Activity
+                </h2>
                 {assignedExercises.length > 0 ? (
-                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                  <div className="space-y-3 max-h-80 overflow-y-auto scrollbar-thin pr-2">
                     {assignedExercises.slice(0, 5).map((exercise) => (
-                      <div key={exercise._id} className={`p-3 rounded-lg ${getStatusColor(exercise.status)}`}>
+                      <div key={exercise._id} className="p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:bg-slate-700/50 transition-colors">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="text-gray-800 font-semibold text-sm">{exercise.exerciseId?.name}</p>
-                            <p className="text-xs text-gray-600 mt-1">
+                            <p className="text-slate-200 font-semibold text-sm">{exercise.exerciseId?.name}</p>
+                            <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide">
                               {exercise.exerciseId?.category} • {exercise.exerciseId?.difficulty}
                             </p>
                           </div>
                           {getStatusBadge(exercise.status)}
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-slate-500 mt-2">
                           Assigned: {new Date(exercise.assignedDate).toLocaleDateString()}
                         </p>
                       </div>
@@ -230,58 +313,62 @@ const PatientDashboard = () => {
 
         {/* Assigned Exercises Tab */}
         {activeTab === 'exercises' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in-up">
             {assignedExercises.length > 0 ? (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-6">
                 {assignedExercises.map((assignment) => {
                   const exercise = assignment.exerciseId;
                   return (
-                    <Card key={assignment._id} className={`p-6 ${getStatusColor(assignment.status)}`}>
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                            {exercise?.name}
-                          </h3>
-                          <p className="text-gray-600 mb-3">
-                            {exercise?.description}
-                          </p>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                            <div className="text-center p-2 bg-white rounded border border-gray-200">
-                              <p className="text-xs text-gray-600">Category</p>
-                              <p className="font-semibold text-gray-800 text-sm">{exercise?.category}</p>
+                    <Card key={assignment._id} className="border-l-4 border-indigo-500 relative overflow-hidden group">
+                      {/* Decorative background element */}
+                      <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors pointer-events-none"></div>
+                      
+                      <div className="relative">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="flex-1">
+                            <h3 className="text-2xl font-bold text-slate-100 mb-2 drop-shadow-sm">
+                              {exercise?.name}
+                            </h3>
+                            <p className="text-slate-400 mb-4 text-sm leading-relaxed max-w-3xl">
+                              {exercise?.description}
+                            </p>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                              <div className="text-center p-3 bg-slate-800/80 rounded-xl border border-slate-700 shadow-sm">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Category</p>
+                                <p className="font-bold text-slate-200 text-sm whitespace-nowrap">{exercise?.category}</p>
+                              </div>
+                              <div className="text-center p-3 bg-slate-800/80 rounded-xl border border-slate-700 shadow-sm">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Difficulty</p>
+                                <p className="font-bold text-slate-200 text-sm capitalize">{exercise?.difficulty}</p>
+                              </div>
+                              <div className="text-center p-3 bg-slate-800/80 rounded-xl border border-slate-700 shadow-sm">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Duration</p>
+                                <p className="font-bold text-slate-200 text-sm">
+                                  {exercise?.duration?.value} {exercise?.duration?.unit}
+                                </p>
+                              </div>
+                              <div className="text-center p-3 bg-slate-800/80 rounded-xl border border-slate-700 shadow-sm">
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Reps / Sets</p>
+                                <p className="font-bold text-slate-200 text-sm">
+                                  {exercise?.repetitions || 'N/A'}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-center p-2 bg-white rounded border border-gray-200">
-                              <p className="text-xs text-gray-600">Difficulty</p>
-                              <p className="font-semibold text-gray-800 text-sm capitalize">{exercise?.difficulty}</p>
-                            </div>
-                            <div className="text-center p-2 bg-white rounded border border-gray-200">
-                              <p className="text-xs text-gray-600">Duration</p>
-                              <p className="font-semibold text-gray-800 text-sm">
-                                {exercise?.duration?.value} {exercise?.duration?.unit}
-                              </p>
-                            </div>
-                            <div className="text-center p-2 bg-white rounded border border-gray-200">
-                              <p className="text-xs text-gray-600">Reps</p>
-                              <p className="font-semibold text-gray-800 text-sm">
-                                {exercise?.repetitions || 'N/A'}
-                              </p>
-                            </div>
-                          </div>
 
-                          {exercise?.instructions && (
-                            <div className="mb-4 p-3 bg-blue-100 rounded-lg border-l-4 border-blue-500">
-                              <p className="text-sm text-blue-900 font-semibold mb-1">Instructions:</p>
-                              <p className="text-sm text-blue-800">{exercise.instructions}</p>
-                            </div>
-                          )}
+                            {exercise?.instructions && (
+                              <div className="mb-6 p-4 bg-indigo-900/30 rounded-xl border border-indigo-500/20 shadow-inner">
+                                <p className="text-sm text-indigo-300 font-bold mb-2 uppercase tracking-wider">Instructions</p>
+                                <p className="text-sm text-slate-300 leading-relaxed">{exercise.instructions}</p>
+                              </div>
+                            )}
 
                           {exercise?.bodyParts && exercise.bodyParts.length > 0 && (
                             <div className="mb-4">
-                              <p className="text-sm font-semibold text-gray-700 mb-2">Target Areas:</p>
+                              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Target Muscle Groups</p>
                               <div className="flex flex-wrap gap-2">
                                 {exercise.bodyParts.map((part, idx) => (
-                                  <Badge key={idx} variant="blue" className="capitalize">{part}</Badge>
+                                  <Badge key={idx} variant="blue" className="capitalize tracking-wide">{part}</Badge>
                                 ))}
                               </div>
                             </div>
@@ -293,9 +380,9 @@ const PatientDashboard = () => {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 justify-between items-center">
-                        <p className="text-xs text-gray-600">
-                          Assigned: {new Date(assignment.assignedDate).toLocaleDateString()}
+                      <div className="flex flex-wrap gap-3 justify-between items-center mt-6 pt-4 border-t border-slate-700/50">
+                        <p className="text-xs text-slate-400 font-medium">
+                          Assigned: <span className="text-slate-300">{new Date(assignment.assignedDate).toLocaleDateString()}</span>
                           {assignment.completedDate && ` • Completed: ${new Date(assignment.completedDate).toLocaleDateString()}`}
                         </p>
                         
@@ -312,6 +399,13 @@ const PatientDashboard = () => {
                               <Button
                                 variant="secondary"
                                 size="sm"
+                                onClick={() => navigate('/exercise-tracking')}
+                              >
+                                📐 Track with AI
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
                                 onClick={() => handleCompleteExercise(assignment._id)}
                                 disabled={completingExerciseId === assignment._id}
                               >
@@ -320,14 +414,23 @@ const PatientDashboard = () => {
                             </>
                           )}
                           {assignment.status === 'in-progress' && (
-                            <Button
-                              variant="success"
-                              size="sm"
-                              onClick={() => handleCompleteExercise(assignment._id)}
-                              disabled={completingExerciseId === assignment._id}
-                            >
-                              {completingExerciseId === assignment._id ? '⏳...' : '✓ Mark Complete'}
-                            </Button>
+                            <>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => navigate('/exercise-tracking')}
+                              >
+                                📐 Track with AI
+                              </Button>
+                              <Button
+                                variant="success"
+                                size="sm"
+                                onClick={() => handleCompleteExercise(assignment._id)}
+                                disabled={completingExerciseId === assignment._id}
+                              >
+                                {completingExerciseId === assignment._id ? '⏳...' : '✓ Mark Complete'}
+                              </Button>
+                            </>
                           )}
                           {assignment.status === 'completed' && (
                             <Button
@@ -340,6 +443,7 @@ const PatientDashboard = () => {
                           )}
                         </div>
                       </div>
+                    </div>
                     </Card>
                   );
                 })}
@@ -356,26 +460,26 @@ const PatientDashboard = () => {
 
         {/* Diet Plans Tab */}
         {activeTab === 'diet' && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in-up">
             {dietPlans.length > 0 ? (
               dietPlans.map((diet, idx) => (
-                <Card key={idx} className="p-6">
-                  <h2 className="text-xl font-bold text-gray-800 mb-2">
-                    Diet Plan for {diet.injuryType}
+                <Card key={idx}>
+                  <h2 className="text-2xl font-bold text-teal-400 mb-3 drop-shadow-sm flex items-center gap-2">
+                    <span>🥗</span> Diet Plan for {diet.injuryType}
                   </h2>
                   {diet.description && (
-                    <p className="text-gray-700 mb-4">{diet.description}</p>
+                    <p className="text-slate-300 mb-6 leading-relaxed max-w-3xl">{diet.description}</p>
                   )}
                   
                   {diet.foods && diet.foods.length > 0 && (
                     <div className="mt-4">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-3">Recommended Foods</h3>
-                      <div className="space-y-2">
+                      <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-700 pb-2">Recommended Nutrition</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {diet.foods.map((food, fIdx) => (
-                          <div key={fIdx} className="p-3 bg-green-50 rounded-lg border border-green-200">
-                            <p className="font-semibold text-gray-800">{food.name}</p>
-                            {food.quantity && <p className="text-sm text-gray-600">Quantity: {food.quantity}</p>}
-                            {food.benefits && <p className="text-sm text-green-700">Benefits: {food.benefits}</p>}
+                          <div key={fIdx} className="p-4 bg-slate-800/80 rounded-xl border border-teal-500/20 hover:border-teal-500/50 transition-colors shadow-sm">
+                            <p className="font-bold text-slate-100 text-lg mb-1">{food.name}</p>
+                            {food.quantity && <p className="text-sm text-slate-400 mb-2 block font-medium tracking-wide">{food.quantity}</p>}
+                            {food.benefits && <p className="text-sm text-teal-300 bg-teal-500/10 px-3 py-1.5 rounded-lg inline-block">✓ {food.benefits}</p>}
                           </div>
                         ))}
                       </div>

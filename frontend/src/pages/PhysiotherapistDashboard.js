@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { physiotherapistsAPI } from '../services/api';
+import { Navbar, PageHeader } from '../components/Layout';
 
 export default function PhysiotherapistDashboard() {
   const navigate = useNavigate();
@@ -41,119 +42,148 @@ export default function PhysiotherapistDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Navigation */}
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-blue-600">RehabAI</h1>
-              <span className="ml-4 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                Physiotherapist
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-700">Welcome, {user?.firstName}!</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition"
-              >
-                Logout
-              </button>
-            </div>
+    <div className="min-h-screen relative overflow-hidden">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
+      <Navbar />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+          <PageHeader 
+            title={`👋 Welcome back, Dr. ${user?.firstName}!`}
+            subtitle="Manage your patients, track their progress, and assign new recovery exercises."
+          />
+          <div className="flex items-center gap-3">
+            <span className="px-4 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-xs font-black uppercase tracking-widest">
+              Physiotherapist Mode
+            </span>
           </div>
         </div>
-      </nav>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
+          <div className="glass-card border-red-500/30 bg-red-500/10 p-4 mb-8 animate-fade-in-up">
+            <p className="text-red-400 font-bold text-sm flex items-center gap-2">
+              <span>⚠️</span> {error}
+            </p>
           </div>
         )}
 
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">Assigned Patients</h2>
-          <p className="text-gray-600">Manage your patients and assign exercises</p>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Quick Stats & Actions Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 animate-fade-in-up">
           <button
             onClick={() => navigate('/exercises')}
-            className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg p-6 hover:shadow-xl transition"
+            className="glass-card border-indigo-500/30 bg-indigo-500/10 p-6 group hover:bg-indigo-500/20 transition-all text-left relative overflow-hidden"
           >
-            <span className="text-3xl block mb-2">➕</span>
-            <p className="font-bold">Create Exercise</p>
+            <div className="absolute -right-4 -top-4 text-7xl opacity-10 group-hover:scale-110 transition-transform">➕</div>
+            <span className="text-3xl block mb-4">🏋️‍♂️</span>
+            <p className="font-black text-slate-100 text-lg">Create Exercise</p>
+            <p className="text-indigo-400 text-xs mt-1 font-bold">Add to the library</p>
           </button>
+          
           <button
             onClick={() => navigate('/messaging')}
-            className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg shadow-lg p-6 hover:shadow-xl transition"
+            className="glass-card border-purple-500/30 bg-purple-500/10 p-6 group hover:bg-purple-500/20 transition-all text-left relative overflow-hidden"
           >
-            <span className="text-3xl block mb-2">💬</span>
-            <p className="font-bold">Messages</p>
+            <div className="absolute -right-4 -top-4 text-7xl opacity-10 group-hover:scale-110 transition-transform">💬</div>
+            <span className="text-3xl block mb-4">✉️</span>
+            <p className="font-black text-slate-100 text-lg">Messages</p>
+            <p className="text-purple-400 text-xs mt-1 font-bold">Contact patients</p>
           </button>
-          <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg shadow-lg p-6">
-            <span className="text-3xl block mb-2">👥</span>
-            <p className="font-bold">Patients: {patients.length}</p>
+
+          <div className="glass-panel border-emerald-500/30 bg-emerald-500/10 p-6 relative overflow-hidden">
+            <div className="absolute -right-4 -top-4 text-7xl opacity-10">👥</div>
+            <span className="text-3xl block mb-4">🏥</span>
+            <p className="font-black text-slate-100 text-lg">Active Patients</p>
+            <p className="text-emerald-400 text-2xl font-black mt-1 ml-1">{patients.length}</p>
           </div>
         </div>
 
-        {/* Patients List */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="px-6 py-4 bg-gray-50 border-b">
-            <h3 className="text-xl font-bold text-gray-800">My Patients</h3>
+        {/* Patients Table Section */}
+        <div className="glass-panel border-slate-700/50 overflow-hidden animate-fade-in-up [animation-delay:200ms]">
+          <div className="px-8 py-6 border-b border-slate-700/50 bg-slate-800/30 flex justify-between items-center">
+            <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-3">
+              <span className="text-indigo-400">📋</span> Assigned Patients
+            </h3>
+            <div className="relative group">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">🔍</span>
+              <input 
+                type="text" 
+                placeholder="Find a patient..." 
+                className="premium-input pl-9 py-1.5 text-xs w-48 focus:w-64 transition-all"
+              />
+            </div>
           </div>
-          {patients.length > 0 ? (
-            <div className="overflow-x-auto">
+
+          <div className="overflow-x-auto">
+            {patients.length > 0 ? (
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Injury</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Plan</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                <thead>
+                  <tr className="bg-slate-900/50">
+                    <th className="px-8 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Patient Name</th>
+                    <th className="px-8 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Condition</th>
+                    <th className="px-8 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Rehab Plan</th>
+                    <th className="px-8 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-800/50">
                   {patients.map((patient) => (
-                    <tr key={patient._id} className="border-b hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-gray-800">
-                          {patient.patientId.firstName} {patient.patientId.lastName}
+                    <tr key={patient._id} className="group hover:bg-white/5 transition-colors">
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xs">
+                            {patient.patientId.firstName[0]}{patient.patientId.lastName[0]}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-100 text-sm">
+                              {patient.patientId.firstName} {patient.patientId.lastName}
+                            </p>
+                            <p className="text-[10px] text-slate-500 font-medium">{patient.patientId.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className="px-3 py-1 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold border border-slate-700/50">
+                          {patient.injuryType || 'No diagnosis'}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className="text-xs text-slate-400 font-medium max-w-[200px] truncate italic">
+                          "{patient.rehabilitationPlan || 'AI assisted plan pending'}"
                         </p>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {patient.injuryType || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {patient.rehabilitationPlan || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">
-                        {patient.patientId.email}
-                      </td>
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-5 text-right">
                         <button
                           onClick={() => navigate(`/mentor/patient/${patient.patientId._id}/progress`)}
-                          className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                          className="text-indigo-400 hover:text-white font-black text-[10px] uppercase tracking-widest transition-colors flex items-center justify-end gap-2 group/btn"
                         >
-                          View Progress
+                          View Progress 
+                          <span className="group-hover/btn:translate-x-1 transition-transform">→</span>
                         </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            ) : (
+              <div className="px-8 py-20 text-center">
+                <div className="text-5xl mb-4 opacity-20">📭</div>
+                <p className="text-slate-500 font-bold">No patients assigned to your roster yet.</p>
+                <p className="text-slate-600 text-xs mt-1">New assignments will appear here automatically.</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="px-8 py-4 bg-slate-900/30 border-t border-slate-700/50 flex justify-between items-center">
+            <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest">
+              RehabAI Clinical Interface v2.0
+            </p>
+            <div className="flex gap-2">
+              <button className="px-3 py-1 bg-slate-800 text-slate-400 rounded-md text-[10px] font-black border border-slate-700/50">Prev</button>
+              <button className="px-3 py-1 bg-slate-800 text-slate-400 rounded-md text-[10px] font-black border border-slate-700/50">Next</button>
             </div>
-          ) : (
-            <div className="px-6 py-12 text-center">
-              <p className="text-gray-500">No patients assigned yet</p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
   );
+
 }

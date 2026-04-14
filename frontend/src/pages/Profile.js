@@ -21,7 +21,7 @@ const Profile = () => {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/patient/profile');
+      const response = await apiClient.get('/patient/profile');
       const data = response.data;
       setProfileData(data);
       setFormData({
@@ -41,7 +41,7 @@ const Profile = () => {
 
   const fetchAchievements = async () => {
     try {
-      const response = await apiClient.get('/api/achievements/user');
+      const response = await apiClient.get('/achievements/user');
       if (response.data.success) {
         setAchievements(response.data.achievements || []);
       }
@@ -60,7 +60,7 @@ const Profile = () => {
 
   const handleSaveProfile = async () => {
     try {
-      await apiClient.put('/api/patient/profile', formData);
+      await apiClient.put('/patient/profile', formData);
       setProfileData({ ...profileData, ...formData });
       setIsEditing(false);
       alert('Profile updated successfully');

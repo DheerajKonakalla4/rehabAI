@@ -13,11 +13,12 @@ export const Button = ({
   const baseStyles = 'font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2';
   
   const variants = {
-    primary: 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl',
-    secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300',
-    danger: 'bg-red-600 text-white hover:bg-red-700 shadow-lg hover:shadow-xl',
-    outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50',
-    ghost: 'text-blue-600 hover:bg-blue-50'
+    primary: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] border-transparent hover:-translate-y-0.5',
+    secondary: 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 shadow-md',
+    danger: 'bg-red-600/90 text-white hover:bg-red-500 shadow-lg border-transparent',
+    success: 'bg-teal-500/90 text-white hover:bg-teal-400 shadow-lg border-transparent',
+    outline: 'border-2 border-indigo-500 text-indigo-400 hover:bg-indigo-500/10',
+    ghost: 'text-indigo-400 hover:bg-slate-800/50'
   };
   
   const sizes = {
@@ -40,7 +41,7 @@ export const Button = ({
 
 // Card Component
 export const Card = ({ children, className = '', ...props }) => (
-  <div className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 ${className}`} {...props}>
+  <div className={`glass-card p-6 ${className}`} {...props}>
     {children}
   </div>
 );
@@ -48,11 +49,11 @@ export const Card = ({ children, className = '', ...props }) => (
 // Badge Component
 export const Badge = ({ children, variant = 'blue', className = '' }) => {
   const variants = {
-    blue: 'bg-blue-100 text-blue-800',
-    green: 'bg-green-100 text-green-800',
-    red: 'bg-red-100 text-red-800',
-    yellow: 'bg-yellow-100 text-yellow-800',
-    gray: 'bg-gray-100 text-gray-800'
+    blue: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+    green: 'bg-teal-500/20 text-teal-300 border border-teal-500/30',
+    red: 'bg-red-500/20 text-red-300 border border-red-500/30',
+    yellow: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30',
+    gray: 'bg-slate-700/50 text-slate-300 border border-slate-600'
   };
   
   return (
@@ -70,12 +71,12 @@ export const Input = ({
   ...props 
 }) => (
   <div className="w-full">
-    {label && <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>}
+    {label && <label className="block text-sm font-medium text-slate-300 mb-2">{label}</label>}
     <input 
-      className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${error ? 'border-red-500 focus:ring-red-500' : ''} ${className}`}
+      className={`premium-input ${error ? 'border-red-500 focus:ring-red-500' : ''} ${className}`}
       {...props}
     />
-    {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+    {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
   </div>
 );
 
@@ -90,13 +91,13 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   };
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`bg-white rounded-xl shadow-2xl ${sizes[size]} w-full mx-4 p-6 animation-fadeIn`}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className={`glass-card ${sizes[size]} w-full mx-4 p-6 animate-fade-in-up border border-slate-700/80`}>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-slate-100">{title}</h2>
           <button 
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            className="text-slate-400 hover:text-white text-2xl transition-colors"
           >
             ×
           </button>
@@ -156,9 +157,9 @@ export const RequestCard = ({
 export const StatsGrid = ({ stats }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     {stats.map((stat, idx) => (
-      <Card key={idx} className="text-center">
-        <p className="text-gray-600 text-sm font-semibold mb-2">{stat.label}</p>
-        <p className="text-3xl font-bold text-blue-600">{stat.value}</p>
+      <Card key={idx} className="text-center hover:bg-slate-800/80 transition-colors">
+        <p className="text-slate-400 text-sm font-medium mb-2">{stat.label}</p>
+        <p className="text-3xl font-bold text-indigo-400 drop-shadow-sm">{stat.value}</p>
       </Card>
     ))}
   </div>
@@ -190,10 +191,10 @@ export const Avatar = ({ name, size = 'md', className = '' }) => {
 
 // Empty State Component
 export const EmptyState = ({ icon, title, description, action }) => (
-  <Card className="text-center py-12">
-    <div className="text-5xl mb-4">{icon}</div>
-    <h3 className="text-xl font-bold text-gray-800 mb-2">{title}</h3>
-    <p className="text-gray-600 mb-6">{description}</p>
+  <Card className="text-center py-12 border-dashed border-2 border-slate-700/50 bg-slate-800/30">
+    <div className="text-5xl mb-4 opacity-80">{icon}</div>
+    <h3 className="text-xl font-bold text-slate-200 mb-2">{title}</h3>
+    <p className="text-slate-400 mb-6">{description}</p>
     {action}
   </Card>
 );
@@ -209,3 +210,64 @@ export const Skeleton = ({ count = 1 }) => (
     ))}
   </div>
 );
+
+// Alert Notification
+export const Alert = ({ title, message, variant = 'info', onClose }) => {
+  const variants = {
+    info: 'bg-blue-900/40 border-blue-500/50 text-blue-200',
+    success: 'bg-teal-900/40 border-teal-500/50 text-teal-200',
+    warning: 'bg-amber-900/40 border-amber-500/50 text-amber-200',
+    danger: 'bg-red-900/40 border-red-500/50 text-red-200'
+  };
+
+  return (
+    <div className={`border-l-4 p-4 rounded-r shadow-md flex justify-between items-start ${variants[variant]}`}>
+      <div>
+        {title && <h4 className="font-bold mb-1">{title}</h4>}
+        <p className="text-sm">{message}</p>
+      </div>
+      {onClose && (
+        <button onClick={onClose} className="text-current opacity-70 hover:opacity-100 text-xl font-bold leading-none ml-4">
+          &times;
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Progress Ring
+export const ProgressRing = ({ radius = 60, stroke = 8, progress = 0, color = '#6366f1' }) => {
+  const normalizedRadius = radius - stroke * 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg height={radius * 2} width={radius * 2} className="transform -rotate-90">
+        <circle
+          stroke="#e5e7eb"
+          fill="transparent"
+          strokeWidth={stroke}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+        <circle
+          stroke={color}
+          fill="transparent"
+          strokeWidth={stroke}
+          strokeDasharray={circumference + ' ' + circumference}
+          style={{ strokeDashoffset, transition: 'stroke-dashoffset 0.5s ease-out' }}
+          strokeLinecap="round"
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center justify-center text-center">
+        <span className="text-2xl font-bold" style={{ color }}>{progress}%</span>
+      </div>
+    </div>
+  );
+};
+

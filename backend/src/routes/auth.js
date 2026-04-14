@@ -13,5 +13,7 @@ router.post('/reset-password', authController.resetPassword);
 // Private routes
 router.get('/profile', authMiddleware, authController.getProfile);
 router.post('/logout', authMiddleware, authController.logout);
+router.post('/enable-mfa', authMiddleware, authController.enableMfa);
+router.post('/verify-mfa', authMiddleware, authController.verifyMfa);
 
 module.exports = router;

@@ -36,102 +36,121 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 flex items-center justify-center py-12 px-4">
-      {/* Decorative elements */}
-      <div className="absolute top-0 left-0 w-40 h-40 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-0 right-0 w-40 h-40 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+    <div className="min-h-screen relative flex items-center justify-center py-12 px-4 overflow-hidden bg-[#0a0a1a]">
+      {/* Background Ambient Glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px] animate-pulse [animation-delay:2s]"></div>
+      
+      {/* Subtle Grid Pattern Overlay */}
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
 
-      <div className="w-full max-w-md z-10">
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2">
-            🏥 RehabAI
+      <div className="w-full max-w-md z-10 animate-fade-in-up">
+        <div className="text-center mb-10">
+          <h1 className="text-6xl font-black text-white mb-3 tracking-tighter drop-shadow-2xl">
+            🏥 Rehab<span className="text-indigo-500">AI</span>
           </h1>
-          <p className="text-blue-100 text-lg">
-            AI-Powered Rehabilitation Support
+          <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">
+            Intelligent Recovery Suite
           </p>
         </div>
 
-        <Card className="backdrop-blur-md bg-white/95">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Welcome Back</h2>
+        <Card className="glass-panel border-slate-700/50 p-8 shadow-2xl relative overflow-hidden">
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
+          
+          <div className="mb-8">
+            <h2 className="text-3xl font-black text-white tracking-tight">Welcome Back</h2>
+            <p className="text-slate-500 text-sm mt-1 font-medium">Please enter your credentials to continue</p>
+          </div>
           
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 font-semibold text-sm">{error}</p>
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl animate-shake">
+              <p className="text-red-400 font-bold text-xs flex items-center gap-2">
+                <span>⚠️</span> {error}
+              </p>
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Input
-              label="Email Address"
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-            
-            <div>
-              <Input
-                label="Password"
-                type="password"
-                name="password"
-                placeholder="Enter your password"
-                value={formData.password}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
+              <input
+                type="email"
+                name="email"
+                placeholder="doctor@test.com"
+                value={formData.email}
                 onChange={handleChange}
+                className="premium-input px-5 h-14"
                 required
               />
-              <div className="mt-2 text-right">
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Password</label>
                 <Link 
                   to="/forgot-password" 
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium transition"
+                  className="text-[10px] font-black text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest"
                 >
-                  Forgot password?
+                  Forgot?
                 </Link>
               </div>
+              <input
+                type="password"
+                name="password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                className="premium-input px-5 h-14"
+                required
+              />
             </div>
             
             <Button 
               variant="primary" 
               type="submit" 
-              loading={loading}
-              className="w-full"
+              disabled={loading}
+              className="w-full h-14 text-base font-black shadow-indigo-500/20 shadow-xl group overflow-hidden relative"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              <span className="relative z-10">{loading ? 'AUTHENTICATING...' : 'SIGN IN'}</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-400 translate-y-full group-hover:translate-y-0 transition-transform duration-300 opacity-20"></div>
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
+          <div className="mt-8 text-center pt-6 border-t border-slate-800/50">
+            <p className="text-slate-500 text-sm font-medium">
               Don't have an account?{' '}
-              <Link to="/register" className="text-blue-600 font-semibold hover:text-blue-700 transition">
+              <Link to="/register" className="text-indigo-400 font-black hover:text-indigo-300 transition-colors underline underline-offset-4 decoration-slate-800">
                 Create one
               </Link>
             </p>
           </div>
 
-          {/* Demo Credentials */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-600 font-semibold mb-3">DEMO ACCOUNTS:</p>
-            <div className="space-y-2 text-xs">
-              <div className="bg-blue-50 p-2 rounded">
-                <p className="font-semibold text-gray-700">Patient:</p>
-                <p className="text-gray-600">patient@test.com / password123</p>
-              </div>
-              <div className="bg-green-50 p-2 rounded">
-                <p className="font-semibold text-gray-700">Doctor:</p>
-                <p className="text-gray-600">doctor@test.com / password123</p>
-              </div>
+          {/* Elegant Demo Credentials */}
+          <div className="mt-8 grid grid-cols-2 gap-3">
+            <div className="bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 hover:bg-slate-800/60 transition-colors cursor-default">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Demo Patient</p>
+              <p className="text-[10px] font-bold text-slate-300 truncate">patient@test.com</p>
+            </div>
+            <div className="bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 hover:bg-slate-800/60 transition-colors cursor-default">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Demo Doctor</p>
+              <p className="text-[10px] font-bold text-slate-300 truncate">doctor@test.com</p>
             </div>
           </div>
         </Card>
 
-        <p className="text-center text-blue-100 text-xs mt-6">
-          Secure • HIPAA Compliant • Your health data is protected
-        </p>
+        <div className="mt-10 flex items-center justify-center gap-6 opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <span className="text-green-500">🔒</span> HIPAA SECURE
+          </span>
+          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <span className="text-indigo-500">🛡️</span> SSL ENCRYPTED
+          </span>
+        </div>
       </div>
     </div>
   );
+
 };
 
 export default Login;

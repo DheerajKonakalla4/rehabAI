@@ -312,3 +312,56 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
+
+// @route   POST /api/auth/enable-mfa
+// @desc    Generate MFA secret and QR code
+// @access  Private
+exports.enableMfa = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const secret = speakeasy.generateSecret({ length: 20, name: `RehabAI (${user.email})` });
+    user.mfaSecret = secret.base32;
+    await user.save();
+
+    qrcode.toDataURL(secret.otpauth_url, (err, data_url) => {
+      if (err) return res.status(500).json({ message: 'Error generating QR code' });
+      res.status(200).json({ secret: secret.base32, qrCode: data_url });
+    });
+  } catch (error) {
+    console.error('MFA enable error:', error);
+    res.status(500).json({ message: 'Server error enabling MFA', error: error.message });
+  }
+};
+
+// @route   POST /api/auth/verify-mfa
+// @desc    Verify MFA token and enable it permanently
+// @access  Private
+exports.verifyMfa = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const verified = speakeasy.totp.verify({
+      secret: user.mfaSecret,
+      encoding: 'base32',
+      token
+    });
+
+    if (verified) {
+      user.isMfaEnabled = true;
+      await user.save();
+      return res.status(200).json({ message: 'MFA enabled successfully' });
+    } else {
+      return res.status(400).json({ message: 'Invalid MFA token' });
+    }
+  } catch (error) {
+    console.error('MFA verify error:', error);
+    res.status(500).json({ message: 'Server error verifying MFA', error: error.message });
+  }
+};
+

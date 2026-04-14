@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -14,6 +15,9 @@ import Messaging from './pages/Messaging';
 import AIChatAssistant from './pages/AIChatAssistant';
 import Support from './pages/Support';
 import Profile from './pages/Profile';
+import DoctorPatientChat from './pages/DoctorPatientChat';
+import AIRehabPlan from './pages/AIRehabPlan';
+import SessionScheduling from './pages/SessionScheduling';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -121,6 +125,30 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/doctor-patient-chat"
+        element={
+          <ProtectedRoute>
+            <DoctorPatientChat />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sessions"
+        element={
+          <ProtectedRoute>
+            <SessionScheduling />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ai-rehab-plan"
+        element={
+          <ProtectedRoute>
+            <AIRehabPlan />
+          </ProtectedRoute>
+        }
+      />
       
       {/* Default Route */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -132,7 +160,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <SocketProvider>
+          <AppRoutes />
+        </SocketProvider>
       </AuthProvider>
     </Router>
   );

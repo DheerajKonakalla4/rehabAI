@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Navbar, PageHeader, TabBar } from '../components/Layout';
-import { Card, Button, StatsGrid, EmptyState, Skeleton, Modal } from '../components/UIComponents';
+import { Card, Button, StatsGrid, EmptyState, Skeleton, Modal, Alert } from '../components/UIComponents';
 import { doctorsAPI, exercisesAPI } from '../services/api';
+import { SocketContext } from '../context/SocketContext';
 
 const DoctorDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -22,6 +23,20 @@ const DoctorDashboard = () => {
   const [dietType, setDietType] = useState('');
   const [dietDescription, setDietDescription] = useState('');
   const [sending, setSending] = useState(false);
+
+  // Socket for emergency alerts
+  const { socket } = useContext(SocketContext);
+  const [emergencyAlerts, setEmergencyAlerts] = useState([]);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('emergency_alert', (data) => {
+        setEmergencyAlerts(prev => [...prev, data]);
+        // Also could play a sound here
+      });
+      return () => socket.off('emergency_alert');
+    }
+  }, [socket]);
 
   useEffect(() => {
     fetchData();
@@ -156,10 +171,26 @@ const DoctorDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen relative">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Emergency Alerts Overlay */}
+      {emergencyAlerts.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 mt-4 space-y-2 z-50 relative">
+          {emergencyAlerts.map((alert, idx) => (
+            <Alert 
+              key={idx}
+              variant="danger"
+              title={`⚠️ CRITICAL: Patient ${alert.patientName} (Pain Level: ${alert.painLevel}/10)`}
+              message={alert.message}
+              onClose={() => setEmergencyAlerts(prev => prev.filter((_, i) => i !== idx))}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
         <PageHeader 
           title={`Dr. ${user?.lastName}'s Dashboard`}
           subtitle="Manage your assigned patients and their treatment plans"
@@ -170,9 +201,11 @@ const DoctorDashboard = () => {
 
         {/* My Patients Tab */}
         {activeTab === 'patients' && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in-up">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-gray-800">My Assigned Patients</h2>
+              <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+                <span>👥</span> My Assigned Patients
+              </h2>
               {availablePatients.length > 0 && (
                 <Button
                   variant="primary"
@@ -184,33 +217,34 @@ const DoctorDashboard = () => {
             </div>
             
             {assignedPatients.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {assignedPatients.map((patient) => (
-                  <Card key={patient._id} className="p-6 hover:shadow-lg transition-shadow">
+                  <Card key={patient._id} className="border-t-4 border-indigo-500 hover:-translate-y-1 transition-transform group relative overflow-hidden">
+                    <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 pointer-events-none"></div>
                     <div className="mb-4">
-                      <h3 className="text-lg font-bold text-gray-800">
+                      <h3 className="text-xl font-bold text-slate-100 drop-shadow-sm mb-1">
                         {patient.patientId.firstName} {patient.patientId.lastName}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">{patient.patientId.email}</p>
+                      <p className="text-sm text-slate-400">{patient.patientId.email}</p>
                       {patient.patientId.phone && (
-                        <p className="text-sm text-gray-600">{patient.patientId.phone}</p>
+                        <p className="text-sm text-slate-400 mt-1">{patient.patientId.phone}</p>
                       )}
                       {patient.patientId.age && (
-                        <p className="text-sm text-gray-600">Age: {patient.patientId.age}</p>
+                        <p className="text-sm text-slate-400 mt-1">Age: <span className="text-slate-300 font-medium">{patient.patientId.age}</span></p>
                       )}
                     </div>
 
                     {patient.injuryType && (
-                      <div className="mb-3 p-2 bg-red-50 rounded border-l-4 border-red-500">
-                        <p className="text-xs text-red-600 font-semibold">Condition:</p>
-                        <p className="text-sm text-red-700">{patient.injuryType}</p>
+                      <div className="mb-3 p-3 bg-red-900/20 rounded-xl border border-red-500/30">
+                        <p className="text-xs text-red-400 font-bold uppercase tracking-wider mb-1">Condition</p>
+                        <p className="text-sm text-slate-200">{patient.injuryType}</p>
                       </div>
                     )}
 
                     {patient.rehabilitationPlan && (
-                      <div className="mb-3 p-2 bg-blue-50 rounded border-l-4 border-blue-500">
-                        <p className="text-xs text-blue-600 font-semibold">RehabilitationPlan:</p>
-                        <p className="text-sm text-blue-700">{patient.rehabilitationPlan}</p>
+                      <div className="mb-4 p-3 bg-indigo-900/20 rounded-xl border border-indigo-500/30">
+                        <p className="text-xs text-indigo-400 font-bold uppercase tracking-wider mb-1">Rehabilitation Plan</p>
+                        <p className="text-sm text-slate-200 line-clamp-2" title={patient.rehabilitationPlan}>{patient.rehabilitationPlan}</p>
                       </div>
                     )}
                     
@@ -253,65 +287,69 @@ const DoctorDashboard = () => {
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
-              <h2 className="text-3xl font-bold text-gray-800 mb-6">📊 Program Performance</h2>
+          <div className="space-y-6 animate-fade-in-up">
+            <Card className="bg-gradient-to-br from-indigo-900/40 to-slate-800/80 border-indigo-500/20">
+              <h2 className="text-2xl font-bold text-indigo-300 mb-6 drop-shadow-sm flex items-center gap-2">
+                <span>📊</span> Program Performance
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <p className="text-gray-600 text-sm font-semibold">Total Patients</p>
-                  <p className="text-4xl font-bold text-blue-600 mt-2">{reports?.totalPatients || 0}</p>
-                  <p className="text-xs text-gray-500 mt-1">under your care</p>
+                <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Patients</p>
+                  <p className="text-4xl font-bold text-indigo-400 mt-2">{reports?.totalPatients || 0}</p>
+                  <p className="text-xs text-slate-500 mt-2">under your care</p>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <p className="text-gray-600 text-sm font-semibold">Exercises Assigned</p>
-                  <p className="text-4xl font-bold text-green-600 mt-2">{reports?.totalExercisesCompleted || 0}</p>
-                  <p className="text-xs text-gray-500 mt-1">total exercises</p>
+                <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Exercises Assigned</p>
+                  <p className="text-4xl font-bold text-teal-400 mt-2">{reports?.totalExercisesCompleted || 0}</p>
+                  <p className="text-xs text-slate-500 mt-2">total exercises</p>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <p className="text-gray-600 text-sm font-semibold">Avg Pain Level</p>
-                  <p className="text-4xl font-bold text-yellow-600 mt-2">{(reports?.averagePainLevel || 0).toFixed(1)}</p>
-                  <p className="text-xs text-gray-500 mt-1">across all patients</p>
+                <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Avg Pain Level</p>
+                  <p className="text-4xl font-bold text-amber-400 mt-2">{(reports?.averagePainLevel || 0).toFixed(1)}</p>
+                  <p className="text-xs text-slate-500 mt-2">across all patients</p>
                 </div>
-                <div className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                  <p className="text-gray-600 text-sm font-semibold">Avg Effort Level</p>
-                  <p className="text-4xl font-bold text-purple-600 mt-2">{(reports?.averageEffortLevel || 0).toFixed(1)}</p>
-                  <p className="text-xs text-gray-500 mt-1">patient compliance</p>
+                <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors">
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Avg Effort Level</p>
+                  <p className="text-4xl font-bold text-purple-400 mt-2">{(reports?.averageEffortLevel || 0).toFixed(1)}</p>
+                  <p className="text-xs text-slate-500 mt-2">patient compliance</p>
                 </div>
               </div>
             </Card>
 
             {/* Patient Progress Table */}
             {reports?.patientReports && reports.patientReports.length > 0 && (
-              <Card className="p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">👥 Patient Progress Overview</h2>
+              <Card>
+                <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+                  <span>👥</span> Patient Progress Overview
+                </h2>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-100 border-b-2 border-gray-300">
+                    <thead className="bg-slate-800/80 border-b border-slate-700">
                       <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Patient Name</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Condition</th>
-                        <th className="px-4 py-3 text-center font-semibold text-gray-700">Sessions</th>
-                        <th className="px-4 py-3 text-center font-semibold text-gray-700">Completed</th>
-                        <th className="px-4 py-3 text-center font-semibold text-gray-700">Avg Pain</th>
+                        <th className="px-4 py-4 text-left font-bold text-slate-400 uppercase tracking-wider text-xs">Patient Name</th>
+                        <th className="px-4 py-4 text-left font-bold text-slate-400 uppercase tracking-wider text-xs">Condition</th>
+                        <th className="px-4 py-4 text-center font-bold text-slate-400 uppercase tracking-wider text-xs">Sessions</th>
+                        <th className="px-4 py-4 text-center font-bold text-slate-400 uppercase tracking-wider text-xs">Completed</th>
+                        <th className="px-4 py-4 text-center font-bold text-slate-400 uppercase tracking-wider text-xs">Avg Pain</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-700/50">
                       {reports.patientReports.map((pReport, idx) => (
-                        <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="px-4 py-3 font-semibold text-gray-800">{pReport.patientName}</td>
-                          <td className="px-4 py-3 text-gray-600">{pReport.injuryType || 'N/A'}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">
+                        <tr key={idx} className="hover:bg-slate-800/50 transition-colors">
+                          <td className="px-4 py-4 font-semibold text-slate-200">{pReport.patientName}</td>
+                          <td className="px-4 py-4 text-slate-400">{pReport.injuryType || 'N/A'}</td>
+                          <td className="px-4 py-4 text-center">
+                            <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full text-xs font-bold">
                               {pReport.totalSessions}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
+                          <td className="px-4 py-4 text-center">
+                            <span className="bg-teal-500/20 text-teal-300 border border-teal-500/30 px-3 py-1 rounded-full text-xs font-bold">
                               {pReport.completedSessions}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold">
+                          <td className="px-4 py-4 text-center">
+                            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold">
                               {(pReport.averagePainLevel || 0).toFixed(1)}
                             </span>
                           </td>
@@ -339,11 +377,11 @@ const DoctorDashboard = () => {
       >
         <form onSubmit={(e) => { e.preventDefault(); handleAssignExercise(); }} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Select Exercise</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">Select Exercise</label>
             <select
               value={selectedExerciseId}
               onChange={(e) => setSelectedExerciseId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="premium-input px-3 py-2 bg-slate-800"
               required
             >
               <option value="">-- Select exercise --</option>
@@ -357,7 +395,7 @@ const DoctorDashboard = () => {
 
           <div className="flex gap-3 pt-4">
             <Button 
-              variant="secondary" 
+              variant="ghost" 
               type="button"
               onClick={() => {
                 setShowExerciseModal(false);
@@ -393,40 +431,40 @@ const DoctorDashboard = () => {
       >
         <form onSubmit={(e) => { e.preventDefault(); handleAddDiet(); }} className="space-y-4 max-h-96 overflow-y-auto">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Injury/Condition Type *</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">Injury/Condition Type *</label>
             <input
               type="text"
               value={dietType}
               onChange={(e) => setDietType(e.target.value)}
               placeholder="e.g., Shoulder Injury, Knee Pain"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="premium-input px-3 py-2"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">Description</label>
             <textarea
               value={dietDescription}
               onChange={(e) => setDietDescription(e.target.value)}
               placeholder="Diet recommendations and notes..."
               rows="2"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="premium-input px-3 py-2"
             />
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-semibold text-gray-700">Food Items</label>
+              <label className="block text-sm font-semibold text-slate-300">Food Items</label>
               <button
                 type="button"
                 onClick={addFoodItem}
-                className="text-blue-600 hover:text-blue-700 text-sm"
+                className="text-indigo-400 hover:text-indigo-300 text-sm font-bold"
               >
                 + Add Food
               </button>
             </div>
-            <div className="space-y-3 max-h-48 overflow-y-auto">
+            <div className="space-y-3 max-h-48 overflow-y-auto scrollbar-thin pr-2">
               {foodItems.map((item, index) => (
                 <div key={index} className="flex gap-2">
                   <input
@@ -434,29 +472,29 @@ const DoctorDashboard = () => {
                     placeholder="Food name"
                     value={item.name}
                     onChange={(e) => updateFoodItem(index, 'name', e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="flex-1 premium-input px-3 py-2 text-sm bg-slate-900"
                   />
                   <input
                     type="text"
                     placeholder="Qty"
                     value={item.quantity}
                     onChange={(e) => updateFoodItem(index, 'quantity', e.target.value)}
-                    className="w-20 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-20 premium-input px-3 py-2 text-sm bg-slate-900"
                   />
                   <input
                     type="text"
                     placeholder="Benefits"
                     value={item.benefits}
                     onChange={(e) => updateFoodItem(index, 'benefits', e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="flex-1 premium-input px-3 py-2 text-sm bg-slate-900"
                   />
                   {foodItems.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeFoodItem(index)}
-                      className="px-2 py-2 text-red-600 hover:text-red-700"
+                      className="px-2 py-2 text-red-500 hover:text-red-400 flex items-center justify-center font-bold text-lg"
                     >
-                      ✕
+                      ×
                     </button>
                   )}
                 </div>
@@ -464,9 +502,9 @@ const DoctorDashboard = () => {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-4 border-t border-slate-700/50 mt-4">
             <Button 
-              variant="secondary" 
+              variant="ghost" 
               type="button"
               onClick={() => {
                 setShowDietModal(false);
@@ -496,16 +534,16 @@ const DoctorDashboard = () => {
           setShowAssignPatientModal(false);
           setSelectedPatientToAssign('');
         }}
-        title="Assign Patient"
+        title="👥 Assign Patient"
         size="md"
       >
         <form onSubmit={(e) => { e.preventDefault(); handleAssignPatient(); }} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Select Patient *</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">Select Patient *</label>
             <select
               value={selectedPatientToAssign}
               onChange={(e) => setSelectedPatientToAssign(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="premium-input px-3 py-2 bg-slate-800"
               required
             >
               <option value="">-- Select a patient --</option>
@@ -517,9 +555,9 @@ const DoctorDashboard = () => {
             </select>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-4 border-t border-slate-700/50 mt-4">
             <Button 
-              variant="secondary" 
+              variant="ghost" 
               type="button"
               onClick={() => {
                 setShowAssignPatientModal(false);
