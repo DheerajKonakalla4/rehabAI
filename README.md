@@ -184,3 +184,5 @@ The frontend will open at `http://localhost:3000`
 - The system uses JWT for stateless authentication
 - All routes require authentication middleware
 - Role-based access control is implemented at the route level
+- if there are any changes or improvements needed please mail
+  
