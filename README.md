@@ -179,7 +179,7 @@ The frontend will open at `http://localhost:3000`
 
 ## Notes
 
-- Exercise data is manually entered by physiotherapist or caretaker
+- Exercise data is manually entered by physiotherapist
 - The system uses JWT for stateless authentication
 - All routes require authentication middleware
 - Role-based access control is implemented at the route level
