@@ -156,7 +156,7 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
   const isProcessingRef = useRef(false);
   const dimensionsRef = useRef({ width: 0, height: 0 });
   const lastDetectionTimeRef = useRef(0);
-  const FPS_CAP = 6; // Cap detection to 6 FPS to prevent freezing on low-end laptops
+  const FPS_CAP = 10; // 10 FPS detection — balanced for performance and accuracy
   const MS_PER_FRAME = 1000 / FPS_CAP;
 
   // Reset state when exercise changes or tracking starts
@@ -452,8 +452,8 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
           <Webcam
             ref={webcamRef}
             videoConstraints={{
-              width: 320,
-              height: 240,
+              width: 640,
+              height: 480,
               frameRate: 15
             }}
             style={{
