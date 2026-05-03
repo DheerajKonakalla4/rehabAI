@@ -276,7 +276,11 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
   }, [config]);
 
   const drawOverlay = useCallback((ctx, width, height, state) => {
-    // Semi-transparent overlay panel at top
+    // Save the mirrored state and reset transform for text
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to normal (un-mirror)
+    
+    // Semi-transparent overlay panel at top-right
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     
     const panelWidth = 200;
@@ -312,6 +316,8 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
     ctx.font = 'bold 14px Arial';
     ctx.fillStyle = '#a5b4fc';
     ctx.fillText(`📐 ${config.name}`, 22, 32);
+    
+    ctx.restore(); // Restore mirrored state
   }, [config]);
 
   const detectPose = useCallback(async () => {
@@ -339,6 +345,11 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
     const ctx = canvasRef.current.getContext("2d");
     ctx.clearRect(0, 0, videoWidth, videoHeight);
 
+    // Mirror the canvas context to match the mirrored webcam
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.translate(-videoWidth, 0);
+
     if (poses && poses.length > 0) {
       const keypoints = poses[0].keypoints;
       const a = keypoints.find(k => k.name === config.joints.a);
@@ -347,7 +358,7 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
 
       let formGood = true;
       const now = Date.now();
-      const shouldUpdateUI = now - stateRef.current.lastUpdate > 100; // Throttle to ~10fps for UI updates
+      const shouldUpdateUI = now - stateRef.current.lastUpdate > 100;
 
       if (a && b && c && a.score > 0.3 && b.score > 0.3 && c.score > 0.3) {
         const angle = calculateAngle(a, b, c);
@@ -357,7 +368,6 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
           setCurrentAngle(Math.round(angle));
         }
 
-        // Rep counting state machine
         const { downAngle, upAngle } = config;
         const isDown = (downAngle < upAngle) ? angle >= upAngle : angle <= downAngle;
         const isUp = (downAngle < upAngle) ? angle <= downAngle : angle >= upAngle;
@@ -370,7 +380,6 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
           if (setRepCount) setRepCount(stateRef.current.reps);
         }
 
-        // Form check
         const formResult = config.formCheck(keypoints);
         formGood = formResult.good;
         stateRef.current.totalFormChecks += 1;
@@ -395,11 +404,16 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
         }
       }
 
+      // Draw skeleton and keypoints (in mirrored context)
       drawSkeleton(keypoints, ctx, formGood);
       drawKeypoints(keypoints, ctx, formGood);
       drawAngleArc(keypoints, ctx);
+      
+      // Restore context before drawing text overlay (so text is not mirrored)
+      ctx.restore();
       drawOverlay(ctx, videoWidth, videoHeight, stateRef.current);
     } else {
+      ctx.restore(); // Restore mirrored context even if no pose
       if (setFeedback && (Date.now() - stateRef.current.lastUpdate > 500)) {
         setFeedback('📷 No person detected. Please step into frame.');
         stateRef.current.lastUpdate = Date.now();
@@ -466,8 +480,7 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
             ref={canvasRef}
             style={{
               position: 'absolute', zIndex: 20,
-              width: '100%', height: '100%', objectFit: 'cover',
-              transform: 'scaleX(-1)'
+              width: '100%', height: '100%', objectFit: 'cover'
             }}
           />
         </>
