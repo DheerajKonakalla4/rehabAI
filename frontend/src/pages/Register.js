@@ -1,12 +1,11 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Button, Input, Card } from '../components/UIComponents';
+import { Button, Alert, Input } from '../components/UIComponents';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useContext(AuthContext);
-  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -14,294 +13,187 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     role: 'patient',
-    age: '',
-    phone: '',
-    specialization: ''
+    phoneNumber: '',
+    age: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    if (name === 'phoneNumber') {
+      const onlyNums = value.replace(/[^0-9]/g, '').slice(0, 10);
+      setFormData({ ...formData, [name]: onlyNums });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
     setError('');
-  };
-
-  const validateStep1 = () => {
-    if (!formData.firstName || !formData.lastName) {
-      setError('First and Last names are required');
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep2 = () => {
-    if (!formData.email) {
-      setError('Email is required');
-      return false;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    
-    if (step === 1) {
-      if (!validateStep1()) return;
-      setStep(2);
-      return;
+    if (formData.password !== formData.confirmPassword) {
+      return setError('Passwords do not match');
     }
-
-    if (!validateStep2()) return;
-
+    
     setLoading(true);
     try {
       await register(formData);
       navigate('/dashboard');
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center py-12 px-4 overflow-hidden bg-[#0a0a1a]">
-      {/* Background Ambient Glows */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[120px] animate-pulse [animation-delay:2s]"></div>
-      
-      {/* Subtle Grid Pattern Overlay */}
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
+    <div className="min-h-screen relative flex items-center justify-center py-20 px-4 overflow-hidden bg-[#0f172a]">
+      {/* Background patterns and glows */}
+      <div className="absolute top-0 left-0 w-full h-full bg-grid pointer-events-none opacity-20"></div>
+      <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[150px] animate-pulse"></div>
+      <div className="absolute bottom-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/10 rounded-full blur-[150px] animate-pulse"></div>
 
-      <div className="w-full max-w-md z-10 animate-fade-in-up">
-        <div className="text-center mb-10">
-          <h1 className="text-6xl font-black text-white mb-3 tracking-tighter drop-shadow-2xl">
-            🏥 Rehab<span className="text-indigo-500">AI</span>
-          </h1>
-          <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">
-            Join the Intelligent Recovery Suite
+      <div className="w-full max-w-2xl z-10 animate-fade-in">
+        <div className="text-center mb-12">
+          <Link to="/" className="inline-block group mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform mb-4 mx-auto">
+              <span className="text-3xl font-black">❖</span>
+            </div>
+            <h1 className="text-5xl font-black text-white tracking-tighter">
+              Create <span className="text-gradient-primary">Account</span>
+            </h1>
+          </Link>
+          <p className="text-slate-400 font-medium max-w-md mx-auto leading-relaxed">
+            Join thousands of patients and professionals using RehabAI for data-driven recovery.
           </p>
         </div>
 
-        <Card className="glass-panel border-slate-700/50 p-8 shadow-2xl relative overflow-hidden">
-          {/* Top accent line */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
+        <div className="glass-card p-10 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-teal-500"></div>
 
-          {/* Progress Bar */}
-          <div className="mb-10">
-            <div className="flex items-center justify-between mb-3 px-1">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                Phase {step} of 2
-              </span>
-              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">
-                {Math.round((step / 2) * 100)}% Complete
-              </span>
-            </div>
-            <div className="w-full bg-slate-800/50 rounded-full h-1.5 overflow-hidden p-[1px] border border-slate-700/30">
-              <div 
-                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1) shadow-[0_0_10px_rgba(99,102,241,0.5)]"
-                style={{ width: `${(step / 2) * 100}%` }}
-              ></div>
-            </div>
-          </div>
+          {error && <Alert variant="danger" message={error} onClose={() => setError('')} className="mb-8" />}
 
-          <div className="mb-8">
-            <h2 className="text-3xl font-black text-white tracking-tight">
-              {step === 1 ? 'Personal Profile' : 'Account Security'}
-            </h2>
-            <p className="text-slate-500 text-sm mt-1 font-medium">
-              {step === 1 ? 'Tell us a bit about yourself' : 'Secure your clinical workspace'}
-            </p>
-          </div>
-          
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl animate-shake">
-              <p className="text-red-400 font-bold text-xs flex items-center gap-2">
-                <span>⚠️</span> {error}
-              </p>
-            </div>
-          )}
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {step === 1 ? (
-              <div className="space-y-6 animate-fade-in-up">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">First Name</label>
-                    <input
-                      type="text"
-                      name="firstName"
-                      placeholder="John"
-                      value={formData.firstName}
-                      onChange={handleChange}
-                      className="premium-input px-5 h-12"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Last Name</label>
-                    <input
-                      type="text"
-                      name="lastName"
-                      placeholder="Doe"
-                      value={formData.lastName}
-                      onChange={handleChange}
-                      className="premium-input px-5 h-12"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">I am registering as</label>
-                  <div className="relative group">
-                    <select
-                      name="role"
-                      value={formData.role}
-                      onChange={handleChange}
-                      className="premium-input px-5 h-12 appearance-none cursor-pointer"
-                    >
-                      <option value="patient" className="bg-slate-900">Patient</option>
-                      <option value="doctor" className="bg-slate-900">Doctor</option>
-                      <option value="physiotherapist" className="bg-slate-900">Physiotherapist</option>
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-indigo-400 transition-colors">▼</div>
-                  </div>
-                </div>
-
-                {formData.role !== 'patient' && (
-                  <div className="space-y-2 animate-fade-in-up">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Specialization</label>
-                    <input
-                      type="text"
-                      name="specialization"
-                      placeholder="e.g., Orthopedics, Sports Medicine"
-                      value={formData.specialization}
-                      onChange={handleChange}
-                      className="premium-input px-5 h-12"
-                      required
-                    />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Age</label>
-                    <input
-                      type="number"
-                      name="age"
-                      placeholder="30"
-                      value={formData.age}
-                      onChange={handleChange}
-                      className="premium-input px-5 h-12"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      placeholder="+1 (555) 000-0000"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="premium-input px-5 h-12"
-                    />
-                  </div>
-                </div>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Role Selection */}
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Select Your Role</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { id: 'patient', label: 'Patient', icon: '🤕' },
+                  { id: 'doctor', label: 'Doctor', icon: '👨‍⚕️' },
+                  { id: 'physiotherapist', label: 'Physio', icon: '🧘' }
+                ].map((role) => (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: role.id })}
+                    className={`p-4 rounded-2xl border-2 transition-all flex items-center gap-3 font-bold ${
+                      formData.role === role.id 
+                        ? 'border-indigo-500 bg-indigo-500/10 text-white shadow-lg shadow-indigo-500/10' 
+                        : 'border-white/5 bg-white/5 text-slate-400 hover:border-white/10'
+                    }`}
+                  >
+                    <span className="text-xl">{role.icon}</span>
+                    <span className="text-sm">{role.label}</span>
+                  </button>
+                ))}
               </div>
-            ) : (
-              <div className="space-y-6 animate-fade-in-up">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Address</label>
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="john@example.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="premium-input px-5 h-14"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    placeholder="Min 6 characters"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="premium-input px-5 h-14"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Confirm Identity</label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    placeholder="Re-enter password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="premium-input px-5 h-14"
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-4 pt-4">
-              {step === 2 && (
-                <button 
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="flex-1 h-14 glass-card bg-slate-800/40 border border-slate-700/50 text-slate-400 font-black hover:bg-slate-800 transition-all rounded-2xl text-xs uppercase tracking-widest"
-                >
-                  Back
-                </button>
-              )}
-              <Button 
-                variant="primary" 
-                type="submit" 
-                disabled={loading}
-                className="flex-1 h-14 text-base font-black shadow-indigo-500/20 shadow-xl"
-              >
-                {loading ? 'PROCESSING...' : (step === 1 ? 'CONTINUE' : 'CREATE ACCOUNT')}
-              </Button>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <Input
+                label="First Name"
+                name="firstName"
+                placeholder="John"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+              />
+              <Input
+                label="Last Name"
+                name="lastName"
+                placeholder="Doe"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <Input
+              label="Email Address"
+              type="email"
+              name="email"
+              placeholder="john@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <Input
+                label="Phone Number"
+                name="phoneNumber"
+                placeholder="10-digit number"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                maxLength="10"
+                required
+              />
+              <Input
+                label="Age"
+                type="number"
+                name="age"
+                placeholder="25"
+                value={formData.age}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-white/5 pt-8">
+              <Input
+                label="Password"
+                type="password"
+                name="password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+              <Input
+                label="Confirm Password"
+                type="password"
+                name="confirmPassword"
+                placeholder="••••••••"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <Button 
+              variant="primary" 
+              type="submit" 
+              loading={loading}
+              className="w-full h-16 text-lg font-black tracking-wider uppercase mt-4"
+            >
+              Initialize Account
+            </Button>
           </form>
 
-          <div className="mt-8 text-center pt-6 border-t border-slate-800/50">
-            <p className="text-slate-500 text-sm font-medium">
+          <div className="mt-10 text-center pt-8 border-t border-white/5">
+            <p className="text-slate-500 font-medium">
               Already have an account?{' '}
               <Link to="/login" className="text-indigo-400 font-black hover:text-indigo-300 transition-colors underline underline-offset-4 decoration-slate-800">
-                Sign in
+                Sign In Instead
               </Link>
             </p>
           </div>
-        </Card>
-
-        <p className="text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-8 flex items-center justify-center gap-2">
-          <span>✔️</span> ISO 27001 Compliant <span>•</span> <span>✔️</span> END-TO-END ENCRYPTED
-        </p>
+        </div>
       </div>
     </div>
   );
-
 };
 
 export default Register;

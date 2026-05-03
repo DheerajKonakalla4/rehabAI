@@ -21,13 +21,13 @@ exports.getAllExercises = async (req, res) => {
     if (userId) {
       try {
         // Get completed exercises count
-        const completedLogs = await ExerciseLog.find({ userId });
+        const completedLogs = await ExerciseLog.find({ patientId: userId });
         stats.completed = completedLogs.length;
 
         // Get this week's exercises
         const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const weekLogs = await ExerciseLog.find({
-          userId,
+          patientId: userId,
           date: { $gte: weekAgo }
         });
         stats.thisWeek = weekLogs.length;
@@ -128,7 +128,7 @@ exports.createExercise = async (req, res) => {
       difficulty,
       imageUrl,
       videoUrl,
-      createdBy: req.user.id
+      createdBy: req.user.userId
     });
 
     await exercise.save();

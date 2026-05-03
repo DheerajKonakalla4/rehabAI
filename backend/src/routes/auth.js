@@ -3,6 +3,11 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { authMiddleware } = require('../middleware/auth');
 
+// Health check (lightweight — wakes up Render from sleep)
+router.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: Date.now() });
+});
+
 // Public routes
 router.post('/register', authController.register);
 router.post('/login', authController.login);

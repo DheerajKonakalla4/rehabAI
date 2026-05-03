@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import { Navbar, PageHeader, TabBar } from '../components/Layout';
-import { Card, Button, Badge, Input, Skeleton, EmptyState } from '../components/UIComponents';
+import React, { useState, useEffect } from 'react';
+import { Navbar, PageHeader } from '../components/Layout';
+import { Skeleton } from '../components/UIComponents';
 import apiClient from '../services/apiClient';
 
 const ExerciseLibrary = () => {
-  const { user } = useContext(AuthContext);
   const [exercises, setExercises] = useState([]);
   const [filteredExercises, setFilteredExercises] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,12 +27,6 @@ const ExerciseLibrary = () => {
     easy: 'Beginner',
     moderate: 'Intermediate',
     hard: 'Advanced'
-  };
-
-  const difficultyColors = {
-    easy: 'green',
-    moderate: 'yellow',
-    hard: 'red'
   };
 
   useEffect(() => {
@@ -87,56 +79,61 @@ const ExerciseLibrary = () => {
   };
 
   const renderExerciseCard = (exercise) => (
-    <Card key={exercise._id} className="flex flex-col h-full hover:shadow-xl transition-all duration-200">
+    <div key={exercise._id} className="glass-card p-6 flex flex-col h-full hover:scale-[1.02] hover:border-indigo-500/30 transition-all duration-200">
       {exercise.imageUrl && (
-        <div className="mb-4 h-40 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg overflow-hidden">
+        <div className="mb-4 h-40 bg-gradient-to-br from-indigo-500/20 to-purple-600/20 rounded-xl overflow-hidden border border-slate-700/30">
           <img src={exercise.imageUrl} alt={exercise.name} className="w-full h-full object-cover" />
         </div>
       )}
       
-      <h3 className="text-lg font-bold text-gray-800 mb-2">{exercise.name}</h3>
+      <h3 className="text-lg font-black text-slate-100 mb-2">{exercise.name}</h3>
       {exercise.description && (
-        <p className="text-sm text-gray-600 mb-3 flex-grow">{exercise.description}</p>
+        <p className="text-sm text-slate-400 mb-3 flex-grow leading-relaxed">{exercise.description}</p>
       )}
 
       <div className="flex flex-wrap gap-2 mb-4">
         {exercise.duration && (
-          <Badge variant="blue" className="text-xs">
+          <span className="px-2 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-[10px] font-bold">
             ⏱️ {exercise.duration.value} {exercise.duration.unit?.replace('s', '')}
-          </Badge>
+          </span>
         )}
         {exercise.repetitions && (
-          <Badge variant="blue" className="text-xs">
+          <span className="px-2 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-md text-[10px] font-bold">
             🔄 {exercise.repetitions} reps
-          </Badge>
+          </span>
         )}
-        <Badge variant={difficultyColors[exercise.difficulty]} className="text-xs">
+        <span className={`px-2 py-1 border rounded-md text-[10px] font-bold ${
+          exercise.difficulty === 'easy' 
+            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+            : exercise.difficulty === 'hard'
+              ? 'bg-red-500/10 text-red-400 border-red-500/20'
+              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+        }`}>
           {difficultyLevels[exercise.difficulty] || 'Moderate'}
-        </Badge>
+        </span>
       </div>
 
       {exercise.status === 'completed' && (
         <div className="mb-3">
-          <Badge variant="green" className="text-xs">✓ Done</Badge>
+          <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-[10px] font-black uppercase tracking-widest">✓ Done</span>
         </div>
       )}
 
-      <Button
-        variant="primary"
-        size="sm"
-        className="w-full"
+      <button
         onClick={() => handleStartExercise(exercise._id)}
+        className="w-full h-10 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-sm font-black transition-all shadow-lg shadow-indigo-500/20"
       >
         ▶ Start Exercise
-      </Button>
-    </Card>
+      </button>
+    </div>
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
         <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
           <Skeleton count={3} height={300} />
         </div>
       </div>
@@ -144,10 +141,11 @@ const ExerciseLibrary = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen relative overflow-hidden">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         {/* Page Header */}
         <PageHeader
           title="Exercise Library"
@@ -156,28 +154,28 @@ const ExerciseLibrary = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-6 shadow-lg">
-            <div className="text-sm opacity-90 mb-1">Total Exercises</div>
-            <div className="text-3xl font-bold">{stats.total}</div>
+          <div className="bg-gradient-to-br from-indigo-600/80 to-indigo-700/80 text-white rounded-2xl p-6 shadow-lg shadow-indigo-500/10 border border-indigo-500/20">
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Total Exercises</div>
+            <div className="text-3xl font-black">{stats.total}</div>
           </div>
-          <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg p-6 shadow-lg">
-            <div className="text-sm opacity-90 mb-1">Completed</div>
-            <div className="text-3xl font-bold">{stats.completed}</div>
+          <div className="bg-gradient-to-br from-emerald-600/80 to-emerald-700/80 text-white rounded-2xl p-6 shadow-lg shadow-emerald-500/10 border border-emerald-500/20">
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Completed</div>
+            <div className="text-3xl font-black">{stats.completed}</div>
           </div>
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg p-6 shadow-lg">
-            <div className="text-sm opacity-90 mb-1">This Week</div>
-            <div className="text-3xl font-bold">{stats.thisWeek}</div>
+          <div className="bg-gradient-to-br from-purple-600/80 to-purple-700/80 text-white rounded-2xl p-6 shadow-lg shadow-purple-500/10 border border-purple-500/20">
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">This Week</div>
+            <div className="text-3xl font-black">{stats.thisWeek}</div>
           </div>
         </div>
 
         {/* Search and Filters */}
         <div className="mb-8">
           <div className="mb-6">
-            <Input
+            <input
               placeholder="Search exercises..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-md"
+              className="premium-input max-w-md px-5 h-12"
             />
           </div>
 
@@ -187,10 +185,10 @@ const ExerciseLibrary = () => {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-full font-bold whitespace-nowrap transition-all text-sm ${
                   selectedCategory === cat.id
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-400'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 border border-indigo-500'
+                    : 'bg-slate-800/60 text-slate-400 border border-slate-700/50 hover:border-indigo-500/40 hover:text-slate-200'
                 }`}
               >
                 {cat.icon} {cat.label}
@@ -205,11 +203,13 @@ const ExerciseLibrary = () => {
             {filteredExercises.map(exercise => renderExerciseCard(exercise))}
           </div>
         ) : (
-          <EmptyState
-            icon="🔍"
-            title="No exercises found"
-            subtitle={searchQuery ? "Try a different search term" : "Select another category"}
-          />
+          <div className="text-center py-20 opacity-60">
+            <div className="text-5xl mb-4">🔍</div>
+            <h3 className="text-xl font-bold text-slate-200">No exercises found</h3>
+            <p className="text-slate-500 text-sm mt-1">
+              {searchQuery ? "Try a different search term" : "Select another category"}
+            </p>
+          </div>
         )}
       </div>
     </div>

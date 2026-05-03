@@ -93,7 +93,7 @@ exports.createProfessional = async (req, res) => {
       responseTime
     } = req.body;
 
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     // Check if professional profile already exists
     const existingProfile = await Professional.findOne({ userId });
@@ -151,7 +151,7 @@ exports.bookAppointment = async (req, res) => {
   try {
     const { professionalId } = req.params;
     const { appointmentDate, notes } = req.body;
-    const patientId = req.user.id;
+    const patientId = req.user.userId;
 
     const professional = await Professional.findById(professionalId);
     if (!professional) {
@@ -202,7 +202,7 @@ exports.getProfessionalAppointments = async (req, res) => {
 exports.setOnlineStatus = async (req, res) => {
   try {
     const { online } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const professional = await Professional.findOneAndUpdate(
       { userId },

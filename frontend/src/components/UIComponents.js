@@ -10,38 +10,39 @@ export const Button = ({
   disabled = false,
   ...props 
 }) => {
-  const baseStyles = 'font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2';
+  const baseStyles = 'font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 active:scale-95';
   
   const variants = {
-    primary: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] border-transparent hover:-translate-y-0.5',
-    secondary: 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700 shadow-md',
-    danger: 'bg-red-600/90 text-white hover:bg-red-500 shadow-lg border-transparent',
-    success: 'bg-teal-500/90 text-white hover:bg-teal-400 shadow-lg border-transparent',
-    outline: 'border-2 border-indigo-500 text-indigo-400 hover:bg-indigo-500/10',
-    ghost: 'text-indigo-400 hover:bg-slate-800/50'
+    primary: 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(79,70,229,0.4)] hover:shadow-[0_8px_25px_rgba(79,70,229,0.5)] border border-white/10 hover:-translate-y-0.5',
+    secondary: 'bg-slate-800/80 backdrop-blur-md text-slate-200 hover:bg-slate-700 border border-white/5 hover:border-white/10',
+    danger: 'bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-500 hover:to-rose-500 shadow-lg shadow-red-500/20',
+    success: 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white hover:from-teal-500 hover:to-emerald-500 shadow-lg shadow-teal-500/20',
+    outline: 'bg-transparent border-2 border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10 hover:border-indigo-400',
+    ghost: 'text-slate-400 hover:text-white hover:bg-white/5'
   };
   
   const sizes = {
-    sm: 'px-3 py-2 text-sm',
-    md: 'px-4 py-2.5 text-md',
-    lg: 'px-6 py-3 text-lg'
+    sm: 'px-4 py-2 text-xs uppercase tracking-wider',
+    md: 'px-6 py-3 text-sm',
+    lg: 'px-8 py-4 text-base'
   };
   
   return (
     <button 
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : ''} ${className}`}
       disabled={disabled || loading}
       {...props}
     >
-      {loading && <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />}
-      {children}
+      {loading ? (
+        <div className="animate-spin h-5 w-5 border-2 border-white/30 border-t-white rounded-full" />
+      ) : children}
     </button>
   );
 };
 
 // Card Component
 export const Card = ({ children, className = '', ...props }) => (
-  <div className={`glass-card p-6 ${className}`} {...props}>
+  <div className={`glass-card p-6 border border-white/5 ${className}`} {...props}>
     {children}
   </div>
 );
@@ -49,15 +50,15 @@ export const Card = ({ children, className = '', ...props }) => (
 // Badge Component
 export const Badge = ({ children, variant = 'blue', className = '' }) => {
   const variants = {
-    blue: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
-    green: 'bg-teal-500/20 text-teal-300 border border-teal-500/30',
-    red: 'bg-red-500/20 text-red-300 border border-red-500/30',
-    yellow: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30',
-    gray: 'bg-slate-700/50 text-slate-300 border border-slate-600'
+    blue: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+    green: 'bg-teal-500/10 text-teal-400 border border-teal-500/20',
+    red: 'bg-red-500/10 text-red-400 border border-red-500/20',
+    yellow: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+    gray: 'bg-slate-700/20 text-slate-400 border border-slate-700/30'
   };
   
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${variants[variant]} ${className}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${variants[variant]} ${className}`}>
       {children}
     </span>
   );
@@ -71,12 +72,12 @@ export const Input = ({
   ...props 
 }) => (
   <div className="w-full">
-    {label && <label className="block text-sm font-medium text-slate-300 mb-2">{label}</label>}
+    {label && <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1 mb-2">{label}</label>}
     <input 
-      className={`premium-input ${error ? 'border-red-500 focus:ring-red-500' : ''} ${className}`}
+      className={`premium-input ${error ? 'border-red-500/50 focus:ring-red-500/30' : ''} ${className}`}
       {...props}
     />
-    {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
+    {error && <p className="text-red-400 text-[10px] font-bold mt-1 ml-1 uppercase tracking-tighter">{error}</p>}
   </div>
 );
 
@@ -91,76 +92,36 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   };
   
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className={`glass-card ${sizes[size]} w-full mx-4 p-6 animate-fade-in-up border border-slate-700/80`}>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-100">{title}</h2>
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className={`glass-card ${sizes[size]} w-full p-8 animate-fade-in-up border border-white/10 shadow-2xl`}>
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl font-black text-white tracking-tight">{title}</h2>
           <button 
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-2xl transition-colors"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all text-2xl"
           >
             ×
           </button>
         </div>
-        {children}
+        <div className="max-h-[70vh] overflow-y-auto scrollbar-thin pr-2">
+          {children}
+        </div>
       </div>
     </div>
   );
 };
 
-// Request Card Component
-export const RequestCard = ({ 
-  userName, 
-  userEmail, 
-  userPhone,
-  specialization,
-  message, 
-  onAccept, 
-  onReject, 
-  loading = false,
-  variant = 'incoming'
-}) => (
-  <Card className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-    <div className="flex-1">
-      <h3 className="text-lg font-bold text-gray-800 mb-1">{userName}</h3>
-      <p className="text-gray-600 mb-2">{userEmail}{userPhone && ` • ${userPhone}`}</p>
-      {specialization && <Badge variant="blue">{specialization}</Badge>}
-      {message && <p className="text-gray-700 mt-2 text-sm">{message}</p>}
-    </div>
-    {variant === 'incoming' && (
-      <div className="flex gap-2">
-        <Button 
-          variant="danger" 
-          size="sm" 
-          onClick={onReject}
-          disabled={loading}
-        >
-          Decline
-        </Button>
-        <Button 
-          variant="primary" 
-          size="sm" 
-          onClick={onAccept}
-          loading={loading}
-        >
-          Accept
-        </Button>
-      </div>
-    )}
-    {variant === 'outgoing' && (
-      <Badge variant="yellow">Pending</Badge>
-    )}
-  </Card>
-);
-
 // Stats Grid Component
 export const StatsGrid = ({ stats }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
     {stats.map((stat, idx) => (
-      <Card key={idx} className="text-center hover:bg-slate-800/80 transition-colors">
-        <p className="text-slate-400 text-sm font-medium mb-2">{stat.label}</p>
-        <p className="text-3xl font-bold text-indigo-400 drop-shadow-sm">{stat.value}</p>
-      </Card>
+      <div key={idx} className="glass-card p-6 flex flex-col items-center justify-center group hover:scale-105">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-2xl mb-4 group-hover:bg-indigo-500/20 transition-colors">
+          {stat.icon || '📊'}
+        </div>
+        <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">{stat.label}</p>
+        <p className="text-3xl font-black text-white drop-shadow-md">{stat.value}</p>
+      </div>
     ))}
   </div>
 );
@@ -168,22 +129,17 @@ export const StatsGrid = ({ stats }) => (
 // Avatar Component
 export const Avatar = ({ name, size = 'md', className = '' }) => {
   const initials = name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase();
+    ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : '??';
   
   const sizes = {
-    sm: 'h-8 w-8 text-xs',
-    md: 'h-12 w-12 text-sm',
-    lg: 'h-16 w-16 text-lg'
+    sm: 'h-10 w-10 text-xs',
+    md: 'h-14 w-14 text-sm',
+    lg: 'h-20 w-20 text-xl'
   };
   
-  const colors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-green-500', 'bg-yellow-500'];
-  const colorIdx = initials.charCodeAt(0) % colors.length;
-  
   return (
-    <div className={`${sizes[size]} ${colors[colorIdx]} rounded-full flex items-center justify-center text-white font-bold ${className}`}>
+    <div className={`${sizes[size]} rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black shadow-lg border border-white/20 ${className}`}>
       {initials}
     </div>
   );
@@ -191,22 +147,25 @@ export const Avatar = ({ name, size = 'md', className = '' }) => {
 
 // Empty State Component
 export const EmptyState = ({ icon, title, description, action }) => (
-  <Card className="text-center py-12 border-dashed border-2 border-slate-700/50 bg-slate-800/30">
-    <div className="text-5xl mb-4 opacity-80">{icon}</div>
-    <h3 className="text-xl font-bold text-slate-200 mb-2">{title}</h3>
-    <p className="text-slate-400 mb-6">{description}</p>
+  <div className="glass-card text-center py-16 border-dashed border-2 border-slate-700/50 bg-slate-800/20 flex flex-col items-center">
+    <div className="text-6xl mb-6 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500 transform hover:scale-110">{icon}</div>
+    <h3 className="text-2xl font-black text-white mb-2">{title}</h3>
+    <p className="text-slate-400 max-w-xs mx-auto mb-8 font-medium">{description}</p>
     {action}
-  </Card>
+  </div>
 );
 
 // Loading Skeleton
-export const Skeleton = ({ count = 1 }) => (
-  <div className="space-y-4">
+export const Skeleton = ({ count = 1, height = 100 }) => (
+  <div className="space-y-6">
     {Array.from({ length: count }).map((_, idx) => (
-      <Card key={idx} className="animate-pulse">
-        <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-        <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-      </Card>
+      <div 
+        key={idx} 
+        style={{ height: `${height}px` }}
+        className="w-full glass-card relative overflow-hidden animate-pulse"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+      </div>
     ))}
   </div>
 );
@@ -214,59 +173,28 @@ export const Skeleton = ({ count = 1 }) => (
 // Alert Notification
 export const Alert = ({ title, message, variant = 'info', onClose }) => {
   const variants = {
-    info: 'bg-blue-900/40 border-blue-500/50 text-blue-200',
-    success: 'bg-teal-900/40 border-teal-500/50 text-teal-200',
-    warning: 'bg-amber-900/40 border-amber-500/50 text-amber-200',
-    danger: 'bg-red-900/40 border-red-500/50 text-red-200'
+    info: 'bg-indigo-500/10 border-indigo-500/30 text-indigo-200',
+    success: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200',
+    warning: 'bg-amber-500/10 border-amber-500/30 text-amber-200',
+    danger: 'bg-red-500/10 border-red-500/30 text-red-200'
   };
 
   return (
-    <div className={`border-l-4 p-4 rounded-r shadow-md flex justify-between items-start ${variants[variant]}`}>
-      <div>
-        {title && <h4 className="font-bold mb-1">{title}</h4>}
-        <p className="text-sm">{message}</p>
+    <div className={`border-l-4 p-5 rounded-xl shadow-2xl flex justify-between items-center backdrop-blur-md animate-fade-in-up ${variants[variant]}`}>
+      <div className="flex gap-4 items-center">
+        <div className="text-2xl">
+          {variant === 'success' ? '✓' : variant === 'danger' ? '✕' : variant === 'warning' ? '⚠' : 'ℹ'}
+        </div>
+        <div>
+          {title && <h4 className="font-black text-sm uppercase tracking-wider mb-0.5">{title}</h4>}
+          <p className="text-sm font-medium opacity-80">{message}</p>
+        </div>
       </div>
       {onClose && (
-        <button onClick={onClose} className="text-current opacity-70 hover:opacity-100 text-xl font-bold leading-none ml-4">
+        <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/10 text-xl transition-all">
           &times;
         </button>
       )}
-    </div>
-  );
-};
-
-// Progress Ring
-export const ProgressRing = ({ radius = 60, stroke = 8, progress = 0, color = '#6366f1' }) => {
-  const normalizedRadius = radius - stroke * 2;
-  const circumference = normalizedRadius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
-
-  return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg height={radius * 2} width={radius * 2} className="transform -rotate-90">
-        <circle
-          stroke="#e5e7eb"
-          fill="transparent"
-          strokeWidth={stroke}
-          r={normalizedRadius}
-          cx={radius}
-          cy={radius}
-        />
-        <circle
-          stroke={color}
-          fill="transparent"
-          strokeWidth={stroke}
-          strokeDasharray={circumference + ' ' + circumference}
-          style={{ strokeDashoffset, transition: 'stroke-dashoffset 0.5s ease-out' }}
-          strokeLinecap="round"
-          r={normalizedRadius}
-          cx={radius}
-          cy={radius}
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center text-center">
-        <span className="text-2xl font-bold" style={{ color }}>{progress}%</span>
-      </div>
     </div>
   );
 };

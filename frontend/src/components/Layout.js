@@ -16,77 +16,77 @@ export const Navbar = () => {
   if (!user) return null;
 
   return (
-    <nav className="glass-panel text-slate-200 shadow-xl sticky top-0 z-40 transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-        <Link to="/dashboard" className="text-2xl font-extrabold tracking-tight flex items-center gap-2 hover:text-indigo-400 transition-colors drop-shadow-md">
-          <span className="text-indigo-500">❖</span> RehabAI
+    <nav className="glass-panel sticky top-0 z-50 backdrop-blur-2xl">
+      <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+        <Link to="/dashboard" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+            <span className="text-xl font-black">❖</span>
+          </div>
+          <span className="text-2xl font-black tracking-tighter text-white">Rehab<span className="text-indigo-400">AI</span></span>
         </Link>
         
-        <div className="flex items-center gap-6 text-sm font-medium">
-          <Link 
-            to="/dashboard" 
-            className="hover:text-indigo-400 transition-colors"
-          >
-            Dashboard
-          </Link>
+        <div className="hidden md:flex items-center gap-8">
+          <Link to="/dashboard" className="text-sm font-bold text-slate-400 hover:text-white transition-colors">Dashboard</Link>
           
           {user.role === 'patient' && (
-            <>
-              <Link to="/sessions" className="hover:text-indigo-400 transition-colors">📅 Sessions</Link>
-              <Link to="/exercise-tracking" className="hover:text-indigo-400 transition-colors">📐 Tracking</Link>
-              <Link to="/ai-rehab-plan" className="hover:text-indigo-400 transition-colors">🤖 AI Plan</Link>
-              <Link to="/doctor-patient-chat" className="hover:text-indigo-400 transition-colors">💬 Doctor Chat</Link>
-              <Link to="/chat" className="hover:text-indigo-400 transition-colors">🧠 AI Assistant</Link>
-            </>
+            <div className="flex items-center gap-8">
+              <Link to="/sessions" className="text-sm font-bold text-slate-400 hover:text-white transition-colors">Sessions</Link>
+              <Link to="/exercise-tracking" className="text-sm font-bold text-slate-400 hover:text-white transition-colors">Tracking</Link>
+              <Link to="/ai-rehab-plan" className="text-sm font-bold text-slate-400 hover:text-white transition-colors">AI Plan</Link>
+              <Link to="/chat" className="text-sm font-bold text-slate-400 hover:text-white transition-colors">AI Assistant</Link>
+            </div>
           )}
 
           {(user.role === 'doctor' || user.role === 'physiotherapist') && (
-            <Link 
-              to="/doctor-patient-chat" 
-              className="hover:text-blue-100 transition font-semibold"
-            >
-              💬 Patient Chat
-            </Link>
+            <div className="flex items-center gap-8">
+              <Link to="/sessions" className="text-sm font-bold text-slate-400 hover:text-white transition-colors">Sessions</Link>
+              <Link to="/doctor-patient-chat" className="text-sm font-bold text-slate-400 hover:text-white transition-colors">Patient Chat</Link>
+            </div>
           )}
+        </div>
 
+        <div className="flex items-center gap-4">
           <div className="relative">
             <button 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2 hover:bg-slate-800 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-slate-700"
+              className="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all"
             >
-              <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" className="ring-2 ring-indigo-500/50" />
-              <span className="hidden sm:inline tracking-wide">{user.firstName}</span>
-              <span className="text-xl">▼</span>
+              <Avatar name={`${user.firstName} ${user.lastName}`} size="sm" />
+              <div className="hidden sm:block text-left">
+                <p className="text-xs font-black text-white leading-none mb-0.5">{user.firstName}</p>
+                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none">{user.role}</p>
+              </div>
+              <span className="text-[10px] text-slate-500 ml-1">▼</span>
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-3 w-56 glass-card overflow-hidden z-50 animate-fade-in-up">
-                <div className="px-4 py-3 border-b border-slate-700/50 bg-slate-800/80">
-                  <p className="font-semibold text-white">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-indigo-400 font-medium tracking-wider uppercase mt-1">{user.role}</p>
+              <div className="absolute right-0 mt-4 w-64 glass-card border border-white/10 overflow-hidden z-50 animate-fade-in-up origin-top-right">
+                <div className="px-6 py-5 border-b border-white/5 bg-white/[0.02]">
+                  <p className="font-black text-white">{user.firstName} {user.lastName}</p>
+                  <p className="text-xs text-slate-500 mt-1">{user.email}</p>
                 </div>
-                <div className="py-1">
+                <div className="p-2">
                   <Link 
                     to="/profile" 
-                    className="flex items-center gap-2 px-4 py-2 hover:bg-slate-700/50 transition-colors text-slate-300 hover:text-white"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-indigo-500/10 hover:text-indigo-300 transition-colors text-slate-300 font-bold text-sm"
                     onClick={() => setIsDropdownOpen(false)}
                   >
-                    👤 My Profile
+                    <span>👤</span> My Profile
                   </Link>
                   <Link 
                     to="/progress-report" 
-                    className="flex items-center gap-2 px-4 py-2 hover:bg-slate-700/50 transition-colors text-slate-300 hover:text-white"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-indigo-500/10 hover:text-indigo-300 transition-colors text-slate-300 font-bold text-sm"
                     onClick={() => setIsDropdownOpen(false)}
                   >
-                    📊 Progress Report
+                    <span>📊</span> Progress Report
                   </Link>
                 </div>
-                <div className="border-t border-slate-700/50 py-1">
+                <div className="p-2 border-t border-white/5 bg-white/[0.01]">
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 text-left px-4 py-2 hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-red-400 transition-colors font-bold text-sm"
                   >
-                    🚪 Logout
+                    <span>🚪</span> Logout
                   </button>
                 </div>
               </div>

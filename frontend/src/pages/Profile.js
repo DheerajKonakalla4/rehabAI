@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Navbar, PageHeader, TabBar } from '../components/Layout';
-import { Card, Button, Badge, Input, Skeleton, Avatar } from '../components/UIComponents';
+import { Navbar, TabBar } from '../components/Layout';
+import { 
+  Skeleton, 
+  Button, 
+  Card, 
+  Badge, 
+  StatsGrid, 
+  Avatar, 
+  Alert 
+} from '../components/UIComponents';
 import apiClient from '../services/apiClient';
 
 const Profile = () => {
@@ -11,6 +19,8 @@ const Profile = () => {
   const [achievements, setAchievements] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
   const [formData, setFormData] = useState({});
 
   useEffect(() => {
@@ -33,7 +43,6 @@ const Profile = () => {
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setProfileData(null);
     } finally {
       setLoading(false);
     }
@@ -47,279 +56,268 @@ const Profile = () => {
       }
     } catch (error) {
       console.error('Error fetching achievements:', error);
-      setAchievements([]);
     }
   };
 
   const handleFormChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSaveProfile = async () => {
-    try {
-      await apiClient.put('/patient/profile', formData);
-      setProfileData({ ...profileData, ...formData });
-      setIsEditing(false);
-      alert('Profile updated successfully');
-    } catch (error) {
-      alert('Error updating profile: ' + error.message);
+    const { name, value } = e.target;
+    if (name === 'phoneNumber') {
+      const numericValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData({ ...formData, [name]: numericValue });
+    } else {
+      setFormData({ ...formData, [name]: value });
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      await apiClient.put('/patient/profile', formData);
+      await fetchProfileData();
+      setIsEditing(false);
+      setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
+      setTimeout(() => setSaveMessage(null), 4000);
+    } catch (error) {
+      const msg = error.response?.data?.message || error.message || 'Failed to update profile';
+      setSaveMessage({ type: 'danger', text: msg });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <Skeleton count={3} height={200} />
+  if (loading) return (
+    <div className="min-h-screen bg-grid">
+      <Navbar />
+      <div className="max-w-4xl mx-auto p-12">
+        <Skeleton count={1} height={200} />
+        <div className="mt-12 grid grid-cols-4 gap-6">
+          {[1,2,3,4].map(i => <Skeleton key={i} count={1} height={100} />)}
+        </div>
+        <div className="mt-12">
+          <Skeleton count={3} height={80} />
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   const stats = [
-    { label: 'Total Exercises', value: profileData?.stats?.totalExercises || 42, icon: '🏃' },
-    { label: 'Days Active', value: profileData?.stats?.daysActive || 28, icon: '📅' },
-    { label: 'Recovery Progress', value: `${profileData?.stats?.recoveryProgress || 78}%`, icon: '📈' },
-    { label: 'Current Streak', value: `${profileData?.stats?.streak || 7} days`, icon: '🔥' }
+    { label: 'Total Tasks', value: profileData?.stats?.totalExercises || 0, icon: '🏃' },
+    { label: 'Days Active', value: profileData?.stats?.daysActive || 0, icon: '📅' },
+    { label: 'Recovery', value: `${profileData?.stats?.recoveryProgress || 0}%`, icon: '📈' },
+    { label: 'Streak', value: `${profileData?.stats?.streak || 0}d`, icon: '🔥' }
   ];
 
   const tabs = [
-    { id: 'personal', label: 'Personal Information' },
-    { id: 'medical', label: 'Medical Information' },
-    { id: 'achievements', label: 'Achievements' }
+    { id: 'personal', label: 'Personal' },
+    { id: 'medical', label: 'Clinical' },
+    { id: 'achievements', label: 'Badges' }
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen relative bg-grid pb-20">
       <Navbar />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-12 animate-fade-in">
+        {saveMessage && (
+          <div className="mb-8 max-w-2xl mx-auto">
+            <Alert 
+              variant={saveMessage.type} 
+              message={saveMessage.text} 
+              onClose={() => setSaveMessage(null)} 
+            />
+          </div>
+        )}
+
         {/* Profile Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl text-white p-8 mb-8 shadow-lg">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="text-6xl">
-              {user?.firstName && user?.lastName
-                ? `${user.firstName[0]}${user.lastName[0]}`
-                : 'JD'}
+        <div className="glass-card p-1 relative overflow-hidden mb-12">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600"></div>
+          <div className="p-10 flex flex-col md:flex-row items-center gap-10">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition-opacity"></div>
+              <Avatar name={profileData?.fullName || `${user?.firstName} ${user?.lastName}`} size="lg" className="relative" />
             </div>
+            
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-bold mb-2">{profileData?.fullName || `${user?.firstName} ${user?.lastName}`}</h1>
-              <p className="text-blue-100 mb-1">Patient ID: {profileData?.patientId || 'PAT-2024-001'}</p>
-              <Badge variant="green" className="inline-block">
-                Active Recovery Plan
-              </Badge>
+              <h1 className="text-4xl font-black text-white tracking-tighter mb-2">
+                {profileData?.fullName || `${user?.firstName} ${user?.lastName}`}
+              </h1>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                <Badge variant="blue">ID: {profileData?.patientId || user?.uniqueId}</Badge>
+                <Badge variant="green">Active Plan</Badge>
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">• Member since {new Date().getFullYear()}</span>
+              </div>
             </div>
-            {!isEditing && (
-              <Button
-                variant="secondary"
-                onClick={() => setIsEditing(true)}
-                className="text-blue-700"
-              >
-                ✏️ Edit Profile
-              </Button>
-            )}
+
+            <div className="flex gap-3">
+              {!isEditing ? (
+                <Button variant="primary" onClick={() => setIsEditing(true)}>
+                  Edit Profile
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={() => setIsEditing(false)}>
+                  Cancel
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => logout()}>Logout</Button>
+            </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, idx) => (
-            <Card key={idx} className="text-center">
-              <div className="text-3xl mb-2">{stat.icon}</div>
-              <div className="text-2xl font-bold text-gray-800 mb-1">{stat.value}</div>
-              <div className="text-sm text-gray-600">{stat.label}</div>
-            </Card>
-          ))}
-        </div>
+        <StatsGrid stats={stats} />
 
         {/* Tab Navigation */}
-        <div className="mb-8">
-          <TabBar
-            tabs={tabs}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+        <div className="mb-12">
+          <TabBar tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
         </div>
 
-        {/* Personal Information Tab */}
-        {activeTab === 'personal' && (
-          <Card>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-6">Personal Information</h3>
+        {/* Tab Content */}
+        <div className="animate-fade-in-up">
+          {activeTab === 'personal' && (
+            <Card className="max-w-4xl mx-auto overflow-hidden">
+              <div className="p-2 border-b border-white/5 bg-white/[0.01]">
+                <h3 className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Personal Details</h3>
               </div>
-
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleFormChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+              <div className="p-10">
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Full Name</label>
                       <input
-                        type="email"
+                        name="fullName"
+                        value={formData.fullName}
+                        onChange={handleFormChange}
+                        className="premium-input px-5 h-14"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Email</label>
+                      <input
                         name="email"
                         value={formData.email}
                         onChange={handleFormChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="premium-input px-5 h-14 opacity-50 cursor-not-allowed"
+                        disabled
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Phone</label>
                       <input
-                        type="tel"
                         name="phoneNumber"
                         value={formData.phoneNumber}
                         onChange={handleFormChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="premium-input px-5 h-14"
+                        maxLength="10"
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Date of Birth</label>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Birth Date</label>
                       <input
                         type="date"
                         name="dateOfBirth"
                         value={formData.dateOfBirth}
                         onChange={handleFormChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="premium-input px-5 h-14"
                       />
                     </div>
+                    <div className="md:col-span-2 pt-6">
+                      <Button variant="primary" size="lg" className="w-full" onClick={handleSaveProfile} loading={saving}>
+                        Save All Changes
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Address</label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleFormChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    {[
+                      { label: 'Full Identity', value: profileData?.fullName || `${user?.firstName} ${user?.lastName}` },
+                      { label: 'Electronic Mail', value: profileData?.email || user?.email },
+                      { label: 'Communication', value: profileData?.phoneNumber || 'Not linked' },
+                      { label: 'Date of Birth', value: profileData?.dateOfBirth || 'Not specified' }
+                    ].map((item, i) => (
+                      <div key={i} className="group">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 group-hover:text-indigo-400 transition-colors">
+                          {item.label}
+                        </p>
+                        <p className="text-lg font-bold text-white">{item.value}</p>
+                      </div>
+                    ))}
                   </div>
+                )}
+              </div>
+            </Card>
+          )}
 
-                  <div className="flex gap-4 pt-4">
-                    <Button variant="primary" onClick={handleSaveProfile}>
-                      Save Changes
-                    </Button>
-                    <Button variant="secondary" onClick={() => setIsEditing(false)}>
-                      Cancel
-                    </Button>
+          {activeTab === 'medical' && (
+            <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Card>
+                <h3 className="text-lg font-black text-white mb-8 tracking-tight">Active Condition</h3>
+                <div className="space-y-6">
+                  <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10">
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Primary Injury</p>
+                    <p className="text-xl font-black text-white">{profileData?.medical?.condition || 'Awaiting diagnosis'}</p>
                   </div>
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/5">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Program Start</p>
+                    <p className="font-bold text-white">{profileData?.medical?.startDate || 'Not started'}</p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card>
+                <h3 className="text-lg font-black text-white mb-8 tracking-tight">Supervising Team</h3>
+                <div className="space-y-6">
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-2xl">👨‍⚕️</div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Assigned Professional</p>
+                      <p className="font-bold text-white">{profileData?.medical?.primaryTherapist || 'Assigning soon...'}</p>
+                    </div>
+                  </div>
+                  <div className="p-6 rounded-2xl bg-white/5 border border-white/5">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Target Completion</p>
+                    <p className="font-bold text-white">{profileData?.medical?.expectedCompletion || 'Determining...'}</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === 'achievements' && (
+            <div className="max-w-5xl mx-auto">
+              {achievements.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {achievements.map((ach) => (
+                    <div 
+                      key={ach.id}
+                      className={`glass-card p-8 text-center transition-all group hover:-translate-y-2 ${
+                        ach.earned 
+                          ? 'border-indigo-500/30 bg-indigo-500/5' 
+                          : 'opacity-40 grayscale'
+                      }`}
+                    >
+                      <div className="text-5xl mb-6 transform group-hover:scale-110 transition-transform">
+                        {ach.icon}
+                      </div>
+                      <h4 className="font-black text-white text-sm uppercase tracking-tight mb-2">{ach.name}</h4>
+                      <p className="text-[10px] text-slate-500 font-bold leading-relaxed">{ach.description}</p>
+                      {ach.earned && (
+                        <div className="mt-6">
+                          <Badge variant="green">Unlocked</Badge>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Full Name</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.fullName || `${user?.firstName} ${user?.lastName}`}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Email Address</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.email || 'john.doe@example.com'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Phone Number</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.phoneNumber || '+91 98765 43210'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Date of Birth</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.dateOfBirth || 'January 15, 1990'}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-gray-600 mb-1">Address</p>
-                    <p className="text-lg font-semibold text-gray-800">{profileData?.address || '123 Recovery Lane, Mumbai, Maharashtra 400001'}</p>
-                  </div>
-                </div>
+                <Card className="text-center py-20 border-dashed border-2">
+                  <div className="text-6xl mb-6">🏆</div>
+                  <h3 className="text-2xl font-black text-white mb-2">No badges unlocked yet</h3>
+                  <p className="text-slate-400 font-medium">Keep completing your daily tasks to earn exclusive awards.</p>
+                </Card>
               )}
             </div>
-          </Card>
-        )}
-
-        {/* Medical Information Tab */}
-        {activeTab === 'medical' && (
-          <Card>
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-gray-800">Medical Information</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Condition</p>
-                  <p className="text-lg font-semibold text-gray-800">{profileData?.medical?.condition || 'Post ACL Surgery Rehabilitation'}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Start Date</p>
-                  <p className="text-lg font-semibold text-gray-800">{profileData?.medical?.startDate || 'February 7, 2024'}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Primary Therapist</p>
-                  <p className="text-lg font-semibold text-gray-800">{profileData?.medical?.primaryTherapist || 'Dr. Priya Sharma'}</p>
-                </div>
-                <div className="border rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Expected Completion</p>
-                  <p className="text-lg font-semibold text-gray-800">{profileData?.medical?.expectedCompletion || 'May 7, 2024'}</p>
-                </div>
-              </div>
-
-              <div className="border rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-2">Notes</p>
-                <p className="text-gray-700">{profileData?.medical?.notes || 'Patient is making excellent progress with knee strengthening exercises. Continue current exercise regimen and gradually increase intensity. Next evaluation scheduled for March 15, 2024.'}</p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Achievements Tab */}
-        {activeTab === 'achievements' && (
-          <Card>
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6">🏆 Achievements & Badges</h3>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {achievements.map((achievement) => (
-                  <div
-                    key={achievement.id}
-                    className={`border-2 rounded-xl p-4 text-center transition-all ${
-                      achievement.earned
-                        ? 'border-yellow-400 bg-yellow-50 shadow-md'
-                        : 'border-gray-300 bg-gray-50 opacity-60'
-                    }`}
-                  >
-                    <div className="text-4xl mb-2">{achievement.icon}</div>
-                    <h4 className="font-bold text-gray-800 mb-1">{achievement.name}</h4>
-                    <p className="text-xs text-gray-600">{achievement.description}</p>
-                    {achievement.earned && (
-                      <Badge variant="green" className="mt-3 text-xs">
-                        ✓ Earned
-                      </Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Logout Button */}
-        <div className="mt-8 flex justify-end">
-          <Button variant="danger" onClick={handleLogout}>
-            🚪 Logout
-          </Button>
+          )}
         </div>
       </div>
     </div>

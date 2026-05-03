@@ -62,9 +62,17 @@ const patientProfileSchema = new mongoose.Schema({
   }],
   medicalHistory: String,
   currentConditions: [String],
+  dateOfBirth: {
+    type: String,
+    default: null
+  },
   emergencyContact: {
     name: String,
     phone: String
+  },
+  address: {
+    type: String,
+    default: ''
   },
   createdAt: {
     type: Date,

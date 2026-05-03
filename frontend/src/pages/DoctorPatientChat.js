@@ -39,12 +39,16 @@ const DoctorPatientChat = () => {
     if (!socket) return;
 
     const handleReceiveMessage = (data) => {
-      if (selectedContact && (data.senderId === selectedContact._id)) {
+      const incomingSenderId = data.senderId?._id || data.senderId;
+      const currentSelectedId = selectedContact?._id;
+      
+      if (currentSelectedId && String(incomingSenderId) === String(currentSelectedId)) {
         setMessages(prev => [...prev, data]);
       }
       // Update contact's last message in the sidebar
       setContacts(prev => prev.map(c => {
-        if (c._id === data.senderId || c._id === data.receiverId) {
+        const contactId = c._id;
+        if (String(contactId) === String(incomingSenderId) || String(contactId) === String(data.receiverId)) {
           return { ...c, lastMessage: data.message, lastTime: data.timestamp };
         }
         return c;
@@ -55,7 +59,7 @@ const DoctorPatientChat = () => {
       setMessages(prev => [...prev, data]);
       setSending(false);
       setContacts(prev => prev.map(c => {
-        if (c._id === data.receiverId) {
+        if (String(c._id) === String(data.receiverId)) {
           return { ...c, lastMessage: data.message, lastTime: data.timestamp };
         }
         return c;
@@ -138,10 +142,12 @@ const DoctorPatientChat = () => {
   // Group messages by date
   const groupMessagesByDate = (msgs) => {
     const groups = {};
-    msgs.forEach(msg => {
-      const date = formatDate(msg.timestamp);
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(msg);
+    const sortedMsgs = [...msgs].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    sortedMsgs.forEach(msg => {
+      const dateLabel = formatDate(msg.timestamp);
+      if (!groups[dateLabel]) groups[dateLabel] = [];
+      groups[dateLabel].push(msg);
     });
     return groups;
   };
@@ -290,19 +296,59 @@ const DoctorPatientChat = () => {
                           </span>
                         </div>
                         {msgs.map((msg, idx) => {
-                          const isMine = msg.senderId === user?._id || msg.senderId?._id === user?._id;
+                          const msgSenderId = msg.senderId?._id || msg.senderId;
+                          const currentUserId = user?._id || user?.id;
+                          const isMine = String(msgSenderId) === String(currentUserId);
+                          
+                          // Determine the role icon
+                          const senderRole = isMine ? user?.role : selectedContact?.role;
+                          const roleIcon = senderRole === 'doctor' ? '👨‍⚕️' : senderRole === 'physiotherapist' ? '🏋️' : '🧑';
+                          const senderInitial = isMine 
+                            ? (user?.firstName?.[0] || '?') 
+                            : (selectedContact?.firstName?.[0] || '?');
+                          
                           return (
-                            <div key={msg._id || idx} className={`flex ${isMine ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
-                              <div className={`max-w-[80%] rounded-2xl p-4 shadow-lg relative ${
+                            <div key={msg._id || idx} className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
+                              {/* Avatar for received messages (left side) */}
+                              {!isMine && (
+                                <div className="flex-shrink-0 mb-1">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-md ${
+                                    senderRole === 'doctor' 
+                                      ? 'bg-gradient-to-br from-teal-500 to-emerald-600 text-white' 
+                                      : senderRole === 'physiotherapist'
+                                        ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white'
+                                        : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                                  }`} title={senderRole === 'doctor' ? 'Doctor' : senderRole === 'physiotherapist' ? 'Physiotherapist' : 'Patient'}>
+                                    {roleIcon}
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className={`max-w-[75%] rounded-2xl p-4 shadow-lg relative ${
                                 isMine 
                                   ? 'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-br-none' 
                                   : 'glass-card bg-slate-800/80 text-slate-200 rounded-bl-none border border-slate-700/50'
                               }`}>
+                                {/* Role label */}
+                                <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${
+                                  isMine ? 'text-indigo-200/70' : 'text-slate-500'
+                                }`}>
+                                  {isMine ? 'You' : (senderRole === 'doctor' ? '👨‍⚕️ Doctor' : senderRole === 'physiotherapist' ? '🏋️ Physio' : '🧑 Patient')}
+                                </p>
                                 <p className="text-sm leading-relaxed">{msg.message}</p>
                                 <p className={`text-[10px] mt-2 font-medium opacity-60 text-right`}>
                                   {formatTime(msg.timestamp)}
                                 </p>
                               </div>
+
+                              {/* Avatar for sent messages (right side) */}
+                              {isMine && (
+                                <div className="flex-shrink-0 mb-1">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-md" title="You">
+                                    {senderInitial}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}

@@ -25,7 +25,7 @@ exports.getAllAchievements = async (req, res) => {
 // Get user achievements
 exports.getUserAchievements = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const userAchievements = await Achievement.find({
       'earnedBy.userId': userId,
@@ -63,7 +63,7 @@ exports.getUserAchievements = async (req, res) => {
 exports.awardAchievement = async (req, res) => {
   try {
     const { achievementId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const achievement = await Achievement.findById(achievementId);
     if (!achievement) {
@@ -211,10 +211,10 @@ exports.deleteAchievement = async (req, res) => {
 // Check and award automatic achievements
 exports.checkAndAwardAchievements = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     // Get user's exercise logs
-    const exerciseLogs = await ExerciseLog.find({ userId });
+    const exerciseLogs = await ExerciseLog.find({ patientId: userId });
     const allAchievements = await Achievement.find({ isActive: true });
     const awardedAchievements = [];
 

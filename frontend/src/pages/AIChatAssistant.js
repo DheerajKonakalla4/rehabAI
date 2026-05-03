@@ -127,23 +127,59 @@ const AIChatAssistant = () => {
   const getAIResponse = (userMessage) => {
     const message = userMessage.toLowerCase();
 
-    if (message.includes('knee') && message.includes('strengthen')) {
-      return `Great question! Here are some effective knee strengthening exercises:\n\n1. **Knee Extensions**: Sit with your back against a wall, extend one leg straight, hold for 2 seconds. Do 3 sets of 10 reps.\n\n2. **Squats**: Stand with feet shoulder-width apart, lower your body as if sitting in a chair. Do 3 sets of 12 reps.\n\n3. **Step-ups**: Use a low step or stair, step up and down slowly. Do 3 sets of 10 reps per leg.\n\nStart with easy exercises and gradually increase intensity. Always warm up first!`;
+    if (message.includes('knee')) {
+      return `Great question! Here are effective **knee** strengthening exercises:\n\n1. **Knee Extensions**: Sit with your back against a wall, extend one leg straight, hold for 2 seconds. Do 3 sets of 10 reps.\n2. **Wall Squats**: Stand with feet shoulder-width apart, lower your body as if sitting in a chair. Do 3 sets of 12 reps.\n3. **Step-ups**: Use a low step or stair, step up and down slowly. Do 3 sets of 10 reps per leg.\n\nStart with easy exercises and gradually increase intensity. Always warm up first!`;
+    }
+
+    if (message.includes('leg') || message.includes('thigh') || message.includes('calf') || message.includes('hamstring')) {
+      return `Here are effective **leg** rehabilitation exercises:\n\n🦵 **Lower Body Recovery:**\n1. **Straight Leg Raises** — Lying flat, lift leg to 45°, hold 3 sec. 3×15 reps.\n2. **Hamstring Curls** — Standing, bend knee bringing heel to buttock. 3×12 reps.\n3. **Quad Sets** — Sitting with leg straight, tighten thigh, hold 5 sec. 3×15 reps.\n4. **Heel Slides** — Lying on back, slide heel toward buttock. 3×10 reps.\n5. **Calf Raises** — Rise onto toes slowly, hold 2 sec, lower. 3×20 reps.\n\n💡 Start with low reps and gradually increase. Apply ice after if sore.`;
+    }
+
+    if (message.includes('hip')) {
+      return `Here are effective **hip** exercises:\n\n1. **Hip Flexor Stretch** — Kneel, push hips forward. Hold 30 sec per side.\n2. **Clamshells** — Lie on side, open top knee. 3×15 reps.\n3. **Bridges** — Lie on back, lift hips. 3×15 reps.\n4. **Standing Hip Abduction** — Lift leg sideways. 3×12 per leg.\n\n💡 Avoid deep squats until cleared by your physiotherapist.`;
+    }
+
+    if (message.includes('ankle') || message.includes('foot')) {
+      return `Here are **ankle/foot** rehabilitation exercises:\n\n1. **Ankle Circles** — Rotate foot clockwise then counter-clockwise. 2 min each.\n2. **Towel Scrunches** — Scrunch towel with toes. 3×10 reps.\n3. **Calf Raises** — Rise onto toes, hold 3 sec. 3×15 reps.\n4. **Single-Leg Balance** — Stand on one foot for 30 sec.\n\n🧊 Apply ice after exercise. Elevate when resting.`;
+    }
+
+    if (message.includes('shoulder')) {
+      return `Here are **shoulder** exercises:\n\n1. **Pendulum Swings** — Lean forward, make small arm circles. 2 min.\n2. **Doorway Stretch** — Arms at 90°, lean into doorway. Hold 30 sec.\n3. **External Rotation** — With band, rotate forearm outward. 3×15 reps.\n4. **Wall Crawl** — Walk fingers up wall. 3×10 reps.`;
+    }
+
+    if (message.includes('back') || message.includes('spine')) {
+      return `**Back** rehabilitation exercises:\n\n1. **Cat-Cow Stretch** — Alternate arch and round back. 3×10.\n2. **Bird Dog** — Opposite arm/leg extension. 3×10 each side.\n3. **Knee-to-Chest** — Pull knee to chest. Hold 20 sec.\n4. **Bridge** — Lift hips. 3×15 reps.\n5. **Child's Pose** — Stretch arms forward. Hold 30 sec.`;
+    }
+
+    if (message.includes('wrist') || message.includes('hand')) {
+      return `**Wrist/hand** exercises:\n\n1. **Wrist Flexion/Extension** — Bend wrist up/down. 3×15.\n2. **Grip Strengthening** — Squeeze soft ball. 3×10.\n3. **Finger Spreads** — Spread wide, hold 5 sec. 3×15.`;
+    }
+
+    if (message.includes('neck')) {
+      return `**Neck** exercises:\n\n1. **Neck Tilts** — Tilt toward shoulder, hold 15 sec. 5 per side.\n2. **Chin Tucks** — Pull chin back, hold 5 sec. 3×10.\n3. **Shoulder Rolls** — Forward then backward. 3×15 each.\n\n⚠️ Move gently. Stop if you feel dizziness.`;
+    }
+
+    if (message.includes('fracture') || message.includes('broken')) {
+      return `🦴 **Fracture Recovery:**\n\n**Phase 1:** Follow cast/splint instructions. Elevate to reduce swelling.\n**Phase 2:** Begin gentle range-of-motion exercises when cleared.\n**Phase 3:** Progressive strengthening and balance training.\n\n📞 Consult your doctor for a personalized plan.`;
+    }
+
+    if (message.includes('sprain') || message.includes('strain')) {
+      return `🩹 **Sprain/Strain Recovery (RICE):**\n\n🧊 **Rest** — Stop activity\n❄️ **Ice** — 15-20 min every 2-3 hours\n🩹 **Compression** — Elastic bandage\n⬆️ **Elevation** — Above heart level\n\nStart gentle exercises after 48-72 hours.`;
     }
 
     if (message.includes('pain')) {
-      return `Sorry to hear you're experiencing pain. Here's what you should do:\n\n1. **Stop immediately** if you feel sharp or severe pain\n2. **Apply ice** for 15-20 minutes if there's swelling\n3. **Rest** for a few hours\n4. **Notify your physiotherapist** as soon as possible - they can adjust your exercises\n5. **Schedule a consultation** with your doctor if pain persists\n\nRemember: Some mild discomfort is normal, but sharp pain is a warning sign!`;
+      return `Sorry to hear you're experiencing pain. Here's what you should do:\n\n1. **Stop immediately** if you feel sharp or severe pain\n2. **Apply ice** for 15-20 minutes if there's swelling\n3. **Rest** for a few hours\n4. **Notify your physiotherapist** — they can adjust your exercises\n5. **Log your pain level** in the Dashboard\n\nRemember: Some mild discomfort is normal, but sharp pain is a warning sign!`;
     }
 
     if (message.includes('progress')) {
-      return `📊 **Your Recent Progress**\n\n✅ Exercises Completed: 42\n📅 Days Active: 28\n📈 Recovery Progress: 78%\n🎯 Current Streak: 7 days\n\n🏆 **Recent Achievements:**\n- 7 Day Streak\n- First Exercise\n- 50% Recovery\n- 25 Exercises\n\nYou're making excellent progress! Keep up the great work!`;
+      return `📊 **Your Progress**\n\nView detailed progress in the **Progress Report** section:\n✅ Exercise completion rate\n📈 Pain level trends\n🎯 Weekly logs\n📅 Session history\n\nKeep up the great work!`;
     }
 
     if (message.includes('appointment') || message.includes('schedule')) {
-      return `I can help you schedule an appointment! To book:\n\n1. Go to the **Support** section in your dashboard\n2. Find a physiotherapist or doctor\n3. Click **Book Appointment**\n4. Select your preferred date and time\n5. Confirm the booking\n\nAlternatively, you can ask me to help you find an available specialist. Would you like me to suggest some options?`;
+      return `📅 To book an appointment:\n\n1. Go to **Sessions** in your dashboard\n2. Your assigned doctor will be shown\n3. Pick date and time\n4. Confirm — your doctor will approve it\n\nOr use **Doctor Chat** to message directly!`;
     }
 
-    return `I understand. I'm here to help with your rehabilitation journey. You can ask me about:\n\n• Exercise instructions and proper form\n• Pain management tips\n• Your progress and achievements\n• Appointment scheduling\n• General rehabilitation advice\n\nHow can I assist you further?`;
+    return `I'm here to help with your rehabilitation! You can ask me about:\n\n🦵 **Body-Specific Exercises** — knee, leg, hip, ankle, shoulder, back, wrist, neck\n🩹 **Injury Recovery** — sprains, fractures, post-surgery\n💊 **Pain management tips**\n📊 **Your progress**\n📅 **Appointment scheduling**\n🥗 **Nutrition guidance**\n\nTry asking: *"exercises for leg injury"* or *"what to do after ankle sprain"*`;
   };
 
   const formatTime = (date) => {

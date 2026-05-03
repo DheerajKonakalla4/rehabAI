@@ -150,36 +150,73 @@ exports.getExerciseLogs = async (req, res) => {
 };
 
 // @route   PUT /api/patient/profile
-// @desc    Update patient profile
+// @desc    Update patient profile (User + PatientProfile fields)
 // @access  Private (Patient)
 exports.updateProfile = async (req, res) => {
   try {
     const patientId = req.user.userId;
-    const { injuryType, rehabilitationPlan, medicalHistory, currentConditions } = req.body;
+    const { 
+      fullName, 
+      email, 
+      phoneNumber, 
+      dateOfBirth, 
+      address,
+      injuryType, 
+      rehabilitationPlan, 
+      medicalHistory, 
+      currentConditions 
+    } = req.body;
+
+    // 1. Update User model fields
+    const userUpdateData = {};
+    if (fullName) {
+      const parts = fullName.trim().split(' ');
+      userUpdateData.firstName = parts[0];
+      userUpdateData.lastName = parts.slice(1).join(' ').trim() || '';
+    }
+    if (email) userUpdateData.email = email;
+    if (phoneNumber) userUpdateData.phone = phoneNumber;
+    
+    if (dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      if (!isNaN(birthDate.getTime())) {
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        userUpdateData.age = age;
+      }
+    }
+
+    if (Object.keys(userUpdateData).length > 0) {
+      await User.findByIdAndUpdate(patientId, userUpdateData);
+    }
+
+    // 2. Update PatientProfile model fields
+    const profileUpdateData = { updatedAt: Date.now() };
+    if (address !== undefined) profileUpdateData.address = address;
+    if (dateOfBirth !== undefined) profileUpdateData.dateOfBirth = dateOfBirth;
+    if (injuryType !== undefined) profileUpdateData.injuryType = injuryType;
+    if (rehabilitationPlan !== undefined) profileUpdateData.rehabilitationPlan = rehabilitationPlan;
+    if (medicalHistory !== undefined) profileUpdateData.medicalHistory = medicalHistory;
+    if (currentConditions !== undefined) profileUpdateData.currentConditions = currentConditions;
 
     const patientProfile = await PatientProfile.findOneAndUpdate(
       { patientId },
-      {
-        injuryType,
-        rehabilitationPlan,
-        medicalHistory,
-        currentConditions,
-        updatedAt: Date.now()
-      },
-      { new: true }
+      profileUpdateData,
+      { new: true, upsert: true }
     ).populate('assignedPhysiotherapist assignedDoctor', 'firstName lastName email');
 
-    if (!patientProfile) {
-      return res.status(404).json({ message: 'Patient profile not found' });
-    }
-
     res.status(200).json({
+      success: true,
       message: 'Profile updated successfully',
       patientProfile
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ message: 'Server error updating profile', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error updating profile', error: error.message });
   }
 };
 
@@ -583,31 +620,44 @@ exports.getProfile = async (req, res) => {
   try {
     const patientId = req.user.userId;
     const user = await User.findById(patientId);
-    const profile = await PatientProfile.findOne({ patientId });
+    const profile = await PatientProfile.findOne({ patientId })
+      .populate('assignedPhysiotherapist assignedDoctor', 'firstName lastName email');
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Get real stats
+    const totalExercises = await ExerciseLog.countDocuments({ patientId });
+    
+    // Calculate days active (unique dates in logs)
+    const logs = await ExerciseLog.find({ patientId }).select('date');
+    const uniqueDays = new Set(logs.map(log => new Date(log.date).toDateString()));
+    const daysActive = uniqueDays.size;
+
+    // Default recovery progress if not set
+    const recoveryProgress = 0; 
+    const streak = 0;
+
     res.status(200).json({
-      fullName: `${user.firstName} ${user.lastName}`,
+      fullName: `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`,
       email: user.email,
       phoneNumber: user.phone || '',
-      dateOfBirth: user.age ? `${new Date().getFullYear() - user.age}-01-01` : '1990-01-01',
-      address: profile?.address || '123 Recovery Lane, Mumbai, Maharashtra 400001',
+      dateOfBirth: profile?.dateOfBirth || (user.age ? `${new Date().getFullYear() - user.age}-01-01` : ''),
+      address: profile?.address || '',
       patientId: profile?.uniquePatientId || user.uniqueId,
       medical: {
-        condition: profile?.injuryType || 'Post ACL Surgery Rehabilitation',
-        startDate: profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'February 7, 2024',
-        primaryTherapist: 'Assigned Physiotherapist',
-        expectedCompletion: 'May 7, 2024',
-        notes: profile?.medicalHistory || 'Patient is making excellent progress.'
+        condition: profile?.injuryType || '',
+        startDate: profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '',
+        primaryTherapist: profile?.assignedPhysiotherapist ? `Dr. ${profile.assignedPhysiotherapist.firstName} ${profile.assignedPhysiotherapist.lastName}` : 'Not assigned',
+        expectedCompletion: 'Not set',
+        notes: profile?.medicalHistory || ''
       },
       stats: {
-        totalExercises: 42,
-        daysActive: 28,
-        recoveryProgress: 78,
-        streak: 7
+        totalExercises,
+        daysActive,
+        recoveryProgress,
+        streak
       }
     });
   } catch (error) {
@@ -616,45 +666,5 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// @route   PUT /api/patient/profile
-// @desc    Update patient profile
-// @access  Private (Patient)
-exports.updateProfile = async (req, res) => {
-  try {
-    const patientId = req.user.userId;
-    const { fullName, email, phoneNumber, dateOfBirth } = req.body;
-    
-    // Split fullName
-    let firstName, lastName;
-    if (fullName) {
-      const parts = fullName.split(' ');
-      firstName = parts[0];
-      lastName = parts.slice(1).join(' ') || '';
-    }
 
-    // Update User
-    const updateData = {};
-    if (firstName) updateData.firstName = firstName;
-    if (lastName) updateData.lastName = lastName;
-    if (email) updateData.email = email;
-    if (phoneNumber) updateData.phone = phoneNumber;
-    if (dateOfBirth) {
-       const today = new Date();
-       const birthDate = new Date(dateOfBirth);
-       let age = today.getFullYear() - birthDate.getFullYear();
-       const m = today.getMonth() - birthDate.getMonth();
-       if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-           age--;
-       }
-       updateData.age = age;
-    }
-
-    await User.findByIdAndUpdate(patientId, updateData);
-
-    res.status(200).json({ message: 'Profile updated successfully' });
-  } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(500).json({ message: 'Server error updating profile', error: error.message });
-  }
-};
 

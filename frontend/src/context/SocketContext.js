@@ -28,6 +28,8 @@ export const SocketProvider = ({ children }) => {
 
       newSocket.on('connect_error', (err) => {
         console.error('Socket connection error:', err.message);
+        if (err.description) console.error('Socket error description:', err.description);
+        if (err.context) console.error('Socket error context:', err.context);
       });
 
       newSocket.on('user_online', ({ onlineUsers: users }) => {

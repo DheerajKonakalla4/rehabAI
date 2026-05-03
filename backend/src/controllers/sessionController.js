@@ -41,7 +41,7 @@ exports.createAppointment = async (req, res) => {
       time,
       type,
       notes,
-      status: 'upcoming'
+      status: 'pending'
     });
 
     await appointment.save();
@@ -59,11 +59,19 @@ exports.createAppointment = async (req, res) => {
 exports.updateAppointmentStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    
+    // Validate allowed status values
+    const allowedStatuses = ['pending', 'upcoming', 'completed', 'cancelled'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: `Invalid status. Must be one of: ${allowedStatuses.join(', ')}` });
+    }
+
     const appointment = await Appointment.findByIdAndUpdate(
       req.params.id,
       { status },
       { new: true }
-    );
+    ).populate('patient', 'firstName lastName email')
+     .populate('professional', 'firstName lastName email');
 
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
