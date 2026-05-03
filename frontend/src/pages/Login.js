@@ -166,17 +166,6 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Quick Access Demo */}
-          <div className="mt-10 grid grid-cols-2 gap-4">
-            <div className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Demo Case</p>
-              <p className="text-[10px] font-bold text-slate-300 truncate">patient@test.com</p>
-            </div>
-            <div className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Demo Staff</p>
-              <p className="text-[10px] font-bold text-slate-300 truncate">doctor@test.com</p>
-            </div>
-          </div>
         </div>
 
         <div className="mt-12 flex items-center justify-center gap-10 opacity-30 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-700">
