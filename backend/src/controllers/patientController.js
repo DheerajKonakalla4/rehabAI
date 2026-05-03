@@ -627,17 +627,42 @@ exports.getProfile = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Get real stats
-    const totalExercises = await ExerciseLog.countDocuments({ patientId });
+    // Get real stats matching dashboard logic
+    const allAssigned = await AssignedExercise.find({ patientId });
+    const totalExercises = allAssigned.length;
+    const completedExercises = allAssigned.filter(ex => ex.status === 'completed').length;
     
-    // Calculate days active (unique dates in logs)
+    // Recovery progress (percentage of completed tasks)
+    const recoveryProgress = totalExercises > 0 
+      ? Math.round((completedExercises / totalExercises) * 100) 
+      : 0;
+
+    // Calculate days active (unique dates in exercise logs)
     const logs = await ExerciseLog.find({ patientId }).select('date');
     const uniqueDays = new Set(logs.map(log => new Date(log.date).toDateString()));
     const daysActive = uniqueDays.size;
 
-    // Default recovery progress if not set
-    const recoveryProgress = 0; 
-    const streak = 0;
+    // Calculate streak (consecutive days of logging)
+    let streak = 0;
+    if (uniqueDays.size > 0) {
+      const sortedDates = Array.from(uniqueDays)
+        .map(d => new Date(d))
+        .sort((a, b) => b - a); // Newest first
+      
+      let current = new Date();
+      current.setHours(0, 0, 0, 0);
+      
+      for (let date of sortedDates) {
+        date.setHours(0, 0, 0, 0);
+        const diff = (current - date) / (1000 * 60 * 60 * 24);
+        if (diff <= 1) {
+          streak++;
+          current = date;
+        } else {
+          break;
+        }
+      }
+    }
 
     res.status(200).json({
       fullName: `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`,
