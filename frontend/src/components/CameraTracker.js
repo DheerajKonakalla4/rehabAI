@@ -95,6 +95,23 @@ const EXERCISE_CONFIGS = {
     downAngle: 80,
     upAngle: 165,
     formCheck: () => ({ good: true, msg: '✅ Extend fully and hold briefly!' })
+  },
+  shoulder_rotation: {
+    name: 'Shoulder Rotation',
+    joints: { a: 'left_shoulder', b: 'left_elbow', c: 'left_wrist' },
+    downAngle: 60,
+    upAngle: 150,
+    isArmExercise: true,
+    formCheck: (keypoints) => {
+      const elbow = keypoints.find(k => k.name === 'left_elbow');
+      const shoulder = keypoints.find(k => k.name === 'left_shoulder');
+      if (elbow && shoulder && elbow.score > 0.3 && shoulder.score > 0.3) {
+        if (Math.abs(elbow.y - shoulder.y) > 50) {
+          return { good: false, msg: '⚠️ Try to keep your elbow level with your shoulder.' };
+        }
+      }
+      return { good: true, msg: '✅ Good rotation! Keep it controlled.' };
+    }
   }
 };
 
@@ -117,6 +134,7 @@ function getExerciseConfig(exerciseType) {
   if (key.includes('leg') || key.includes('raise')) return EXERCISE_CONFIGS.leg_raises;
   if (key.includes('knee') || key.includes('extension')) return EXERCISE_CONFIGS.knee_extensions;
   if (key.includes('squat') || key.includes('lower')) return EXERCISE_CONFIGS.squats;
+  if (key.includes('rotation') || key.includes('rotate')) return EXERCISE_CONFIGS.shoulder_rotation;
   
   return EXERCISE_CONFIGS.squats; // default
 }
@@ -130,8 +148,16 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
     reps: 0,
     goodFormCount: 0,
     totalFormChecks: 0,
-    lastAngle: 0
+    lastAngle: 0,
+    lastUpdate: 0 // For throttling state updates
   });
+
+  const requestRef = useRef();
+  const isProcessingRef = useRef(false);
+  const dimensionsRef = useRef({ width: 0, height: 0 });
+  const lastDetectionTimeRef = useRef(0);
+  const FPS_CAP = 6; // Cap detection to 6 FPS to prevent freezing on low-end laptops
+  const MS_PER_FRAME = 1000 / FPS_CAP;
 
   // Reset state when exercise changes or tracking starts
   useEffect(() => {
@@ -148,18 +174,45 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
 
   // Initialize the pose detection model
   useEffect(() => {
+    let active = true;
     const initModel = async () => {
-      await tf.ready();
-      const model = poseDetection.SupportedModels.MoveNet;
-      const detectorConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-      };
-      const newDetector = await poseDetection.createDetector(model, detectorConfig);
-      setDetector(newDetector);
-      console.log('Pose detection model loaded.');
+      try {
+        await tf.ready();
+        // Force WebGL backend for better performance
+        if (tf.getBackend() !== 'webgl') {
+          await tf.setBackend('webgl');
+        }
+        
+        const model = poseDetection.SupportedModels.MoveNet;
+        const detectorConfig = {
+          modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+          enableSmoothing: true
+        };
+        const newDetector = await poseDetection.createDetector(model, detectorConfig);
+        if (active) {
+          setDetector(newDetector);
+          console.log('Pose detection model loaded with backend:', tf.getBackend());
+        } else {
+          newDetector.dispose();
+        }
+      } catch (err) {
+        console.error('Failed to load detector:', err);
+      }
     };
     initModel();
+    return () => {
+      active = false;
+    };
   }, []);
+
+  // Cleanup detector on unmount
+  useEffect(() => {
+    return () => {
+      if (detector) {
+        detector.dispose();
+      }
+    };
+  }, [detector]);
 
   const config = getExerciseConfig(exerciseType);
 
@@ -263,99 +316,129 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
 
   const detectPose = useCallback(async () => {
     if (
-      typeof webcamRef.current !== "undefined" &&
-      webcamRef.current !== null &&
-      webcamRef.current.video.readyState === 4 &&
-      detector
-    ) {
-      const video = webcamRef.current.video;
-      const videoWidth = webcamRef.current.video.videoWidth;
-      const videoHeight = webcamRef.current.video.videoHeight;
+      !webcamRef.current?.video || 
+      webcamRef.current.video.readyState !== 4 || 
+      !detector || 
+      !canvasRef.current
+    ) return;
 
-      webcamRef.current.video.width = videoWidth;
-      webcamRef.current.video.height = videoHeight;
+    const video = webcamRef.current.video;
+    const { videoWidth, videoHeight } = video;
 
-      const poses = await detector.estimatePoses(video);
-
-      const ctx = canvasRef.current.getContext("2d");
+    // Only update dimensions if they changed
+    if (dimensionsRef.current.width !== videoWidth || dimensionsRef.current.height !== videoHeight) {
+      video.width = videoWidth;
+      video.height = videoHeight;
       canvasRef.current.width = videoWidth;
       canvasRef.current.height = videoHeight;
-      ctx.clearRect(0, 0, videoWidth, videoHeight);
+      dimensionsRef.current = { width: videoWidth, height: videoHeight };
+    }
 
-      if (poses.length > 0) {
-        const keypoints = poses[0].keypoints;
+    const poses = await detector.estimatePoses(video);
 
-        // Get the three joints for the current exercise
-        const a = keypoints.find(k => k.name === config.joints.a);
-        const b = keypoints.find(k => k.name === config.joints.b);
-        const c = keypoints.find(k => k.name === config.joints.c);
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.clearRect(0, 0, videoWidth, videoHeight);
 
-        let formGood = true;
+    if (poses && poses.length > 0) {
+      const keypoints = poses[0].keypoints;
+      const a = keypoints.find(k => k.name === config.joints.a);
+      const b = keypoints.find(k => k.name === config.joints.b);
+      const c = keypoints.find(k => k.name === config.joints.c);
 
-        if (a && b && c && a.score > 0.3 && b.score > 0.3 && c.score > 0.3) {
-          const angle = calculateAngle(a, b, c);
-          stateRef.current.lastAngle = angle;
-          if (setCurrentAngle) setCurrentAngle(Math.round(angle));
+      let formGood = true;
+      const now = Date.now();
+      const shouldUpdateUI = now - stateRef.current.lastUpdate > 100; // Throttle to ~10fps for UI updates
 
-          // Rep counting state machine
-          const { downAngle, upAngle } = config;
-          const isDown = (downAngle < upAngle) ? angle >= upAngle : angle <= downAngle;
-          const isUp = (downAngle < upAngle) ? angle <= downAngle : angle >= upAngle;
-
-          if (stateRef.current.phase === 'up' && isDown) {
-            stateRef.current.phase = 'down';
-          } else if (stateRef.current.phase === 'down' && isUp) {
-            stateRef.current.phase = 'up';
-            stateRef.current.reps += 1;
-            if (setRepCount) setRepCount(stateRef.current.reps);
-          }
-
-          // Form check
-          const formResult = config.formCheck(keypoints);
-          formGood = formResult.good;
-          stateRef.current.totalFormChecks += 1;
-          if (formGood) stateRef.current.goodFormCount += 1;
-
-          const quality = stateRef.current.totalFormChecks > 0
-            ? Math.round((stateRef.current.goodFormCount / stateRef.current.totalFormChecks) * 100)
-            : 100;
-          if (setFormQuality) setFormQuality(quality);
-
-          if (setFeedback) {
-            setFeedback(formResult.msg);
-          }
-        } else {
-          if (setFeedback) {
-            setFeedback('📷 Position yourself so your full body is visible.');
-          }
+      if (a && b && c && a.score > 0.3 && b.score > 0.3 && c.score > 0.3) {
+        const angle = calculateAngle(a, b, c);
+        stateRef.current.lastAngle = angle;
+        
+        if (shouldUpdateUI && setCurrentAngle) {
+          setCurrentAngle(Math.round(angle));
         }
 
-        // Draw skeleton and keypoints
-        drawSkeleton(keypoints, ctx, formGood);
-        drawKeypoints(keypoints, ctx, formGood);
-        drawAngleArc(keypoints, ctx);
-        drawOverlay(ctx, videoWidth, videoHeight, stateRef.current);
+        // Rep counting state machine
+        const { downAngle, upAngle } = config;
+        const isDown = (downAngle < upAngle) ? angle >= upAngle : angle <= downAngle;
+        const isUp = (downAngle < upAngle) ? angle <= downAngle : angle >= upAngle;
+
+        if (stateRef.current.phase === 'up' && isDown) {
+          stateRef.current.phase = 'down';
+        } else if (stateRef.current.phase === 'down' && isUp) {
+          stateRef.current.phase = 'up';
+          stateRef.current.reps += 1;
+          if (setRepCount) setRepCount(stateRef.current.reps);
+        }
+
+        // Form check
+        const formResult = config.formCheck(keypoints);
+        formGood = formResult.good;
+        stateRef.current.totalFormChecks += 1;
+        if (formGood) stateRef.current.goodFormCount += 1;
+
+        if (shouldUpdateUI) {
+          if (setFormQuality) {
+            const quality = stateRef.current.totalFormChecks > 0
+              ? Math.round((stateRef.current.goodFormCount / stateRef.current.totalFormChecks) * 100)
+              : 100;
+            setFormQuality(quality);
+          }
+          if (setFeedback) setFeedback(formResult.msg);
+          stateRef.current.lastUpdate = now;
+        }
       } else {
-        if (setFeedback) {
-          setFeedback('📷 No person detected. Please step into frame.');
+        if (shouldUpdateUI && setFeedback) {
+          setFeedback(config.isArmExercise 
+            ? '📷 Ensure your shoulder, elbow, and wrist are visible.' 
+            : '📷 Position yourself so your full body is visible.');
+          stateRef.current.lastUpdate = now;
         }
+      }
+
+      drawSkeleton(keypoints, ctx, formGood);
+      drawKeypoints(keypoints, ctx, formGood);
+      drawAngleArc(keypoints, ctx);
+      drawOverlay(ctx, videoWidth, videoHeight, stateRef.current);
+    } else {
+      if (setFeedback && (Date.now() - stateRef.current.lastUpdate > 500)) {
+        setFeedback('📷 No person detected. Please step into frame.');
+        stateRef.current.lastUpdate = Date.now();
       }
     }
   }, [detector, config, setFeedback, setRepCount, setFormQuality, setCurrentAngle, drawKeypoints, drawSkeleton, drawAngleArc, drawOverlay]);
 
   useEffect(() => {
-    let interval;
+    const loop = async () => {
+      const now = Date.now();
+      const elapsed = now - lastDetectionTimeRef.current;
+
+      if (isTracking && !isProcessingRef.current && elapsed >= MS_PER_FRAME) {
+        isProcessingRef.current = true;
+        lastDetectionTimeRef.current = now;
+        await detectPose();
+        isProcessingRef.current = false;
+      }
+      requestRef.current = requestAnimationFrame(loop);
+    };
+
     if (isTracking) {
-      interval = setInterval(() => {
-        detectPose();
-      }, 100); // 10fps detection
+      requestRef.current = requestAnimationFrame(loop);
     } else {
+      if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+      }
       const ctx = canvasRef.current?.getContext("2d");
       if (ctx && canvasRef.current) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       }
+      isProcessingRef.current = false;
     }
-    return () => clearInterval(interval);
+
+    return () => {
+      if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+      }
+    };
   }, [isTracking, detectPose]);
 
   return (
@@ -368,6 +451,11 @@ const CameraTracker = ({ isTracking, exerciseType, setRepCount, setFeedback, set
         <>
           <Webcam
             ref={webcamRef}
+            videoConstraints={{
+              width: 320,
+              height: 240,
+              frameRate: 15
+            }}
             style={{
               position: 'absolute', zIndex: 10,
               width: '100%', height: '100%', objectFit: 'cover'

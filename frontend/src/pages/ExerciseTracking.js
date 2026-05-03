@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { patientsAPI } from '../services/api';
-import CameraTracker from '../components/CameraTracker';
 import { Navbar } from '../components/Layout';
+
+// Lazy-load CameraTracker so TensorFlow.js only downloads when tracking starts
+const CameraTracker = React.lazy(() => import('../components/CameraTracker'));
 
 export default function ExerciseTracking() {
   const navigate = useNavigate();
@@ -244,14 +246,31 @@ export default function ExerciseTracking() {
                 {/* Camera Feed */}
                 {isTracking && (
                   <div className="rounded-lg overflow-hidden" style={{ height: 420 }}>
-                    <CameraTracker 
-                      isTracking={isTracking}
-                      exerciseType={getExerciseType(selectedExercise)}
-                      setRepCount={setRepCount}
-                      setFeedback={setTrackerFeedback}
-                      setFormQuality={setFormQuality}
-                      setCurrentAngle={setCurrentAngle}
-                    />
+                    <Suspense fallback={
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        height: '100%', background: '#000', borderRadius: 12, color: '#fff'
+                      }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{
+                            width: 40, height: 40, border: '3px solid rgba(99,102,241,0.3)',
+                            borderTopColor: '#6366f1', borderRadius: '50%',
+                            animation: 'spin 1s linear infinite', margin: '0 auto 12px'
+                          }} />
+                          <p style={{ fontWeight: 600, fontSize: 14 }}>Loading AI Tracking...</p>
+                          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>First load may take a moment</p>
+                        </div>
+                      </div>
+                    }>
+                      <CameraTracker 
+                        isTracking={isTracking}
+                        exerciseType={getExerciseType(selectedExercise)}
+                        setRepCount={setRepCount}
+                        setFeedback={setTrackerFeedback}
+                        setFormQuality={setFormQuality}
+                        setCurrentAngle={setCurrentAngle}
+                      />
+                    </Suspense>
                   </div>
                 )}
                 
