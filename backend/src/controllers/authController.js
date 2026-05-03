@@ -172,6 +172,51 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// @route   PUT /api/auth/profile
+// @desc    Update logged-in user profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, phone, age, profileImage } = req.body;
+    const userId = req.user.userId;
+
+    const updates = {};
+    if (firstName) updates.firstName = firstName;
+    if (lastName) updates.lastName = lastName;
+    if (phone) updates.phone = phone;
+    if (age) updates.age = parseInt(age);
+    if (profileImage) updates.profileImage = profileImage;
+    updates.updatedAt = Date.now();
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        age: user.age,
+        phone: user.phone,
+        profileImage: user.profileImage
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ message: 'Server error updating profile', error: error.message });
+  }
+};
+
 // @route   POST /api/auth/logout
 // @desc    Logout user
 // @access  Private

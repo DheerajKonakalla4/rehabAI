@@ -31,15 +31,20 @@ const Profile = () => {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/patient/profile');
+      const endpoint = user?.role === 'patient' ? '/patient/profile' : '/auth/profile';
+      const response = await apiClient.get(endpoint);
       const data = response.data;
-      setProfileData(data);
+      
+      // auth/profile returns { user: {...} }, patient/profile returns direct data
+      const actualData = data.user || data;
+      setProfileData(actualData);
+      
       setFormData({
-        fullName: data.fullName || '',
-        email: data.email || '',
-        phoneNumber: data.phoneNumber || '',
-        dateOfBirth: data.dateOfBirth || '',
-        address: data.address || ''
+        fullName: actualData.fullName || (actualData.firstName ? `${actualData.firstName} ${actualData.lastName || ''}` : ''),
+        email: actualData.email || '',
+        phoneNumber: actualData.phone || actualData.phoneNumber || '',
+        dateOfBirth: actualData.dateOfBirth || '',
+        address: actualData.address || ''
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -73,7 +78,19 @@ const Profile = () => {
     setSaving(true);
     setSaveMessage(null);
     try {
-      await apiClient.put('/patient/profile', formData);
+      if (user?.role === 'patient') {
+        await apiClient.put('/patient/profile', formData);
+      } else {
+        // Prepare split names for auth endpoint
+        const parts = formData.fullName.trim().split(' ');
+        const updatePayload = {
+          firstName: parts[0],
+          lastName: parts.slice(1).join(' ').trim() || '',
+          phone: formData.phoneNumber
+        };
+        await apiClient.put('/auth/profile', updatePayload);
+      }
+      
       await fetchProfileData();
       setIsEditing(false);
       setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
