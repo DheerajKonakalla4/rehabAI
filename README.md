@@ -180,7 +180,7 @@ The frontend will open at `http://localhost:3000`
 
 ## Notes
 
-- No camera tracking or OpenCV is used
+- OpenCV is used
 - Exercise data is manually entered by physiotherapist or caretaker
 - The system uses JWT for stateless authentication
 - All routes require authentication middleware
